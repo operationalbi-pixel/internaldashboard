@@ -287,6 +287,8 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSyst
 .daily-compare-tag{display:none;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700}
 .daily-compare-tag.show{display:inline-flex}
 .daily-compare-tag button{border:none;background:transparent;color:inherit;font-size:14px;line-height:1;cursor:pointer}
+.loading{width:100%;min-height:260px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;color:var(--ink-3);font-size:12.5px;font-weight:600}
+#c-p12d .loading{height:100%;min-height:300px}
 @media(max-width:980px){.daily-filter-grid{grid-template-columns:1fr 1fr}.daily-filter-category{grid-column:1/-1}}
 @media(max-width:620px){.daily-filter-grid{grid-template-columns:1fr}.daily-filter-category{grid-column:auto}}
 
@@ -1061,10 +1063,6 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
           <input type="text" class="fc w-full" id="ci-promo-category" placeholder="Cari promo category..." oninput="filterDailyPromoCombo()" onfocus="openDailyPromoCombo()" onblur="closeDailyPromoCombo()" autocomplete="off">
           <div class="combo-list" id="cl-promo-category"></div>
         </div>
-        <div class="daily-compare-row">
-          <button class="btn btn-s btn-sm" id="p12d-compare-btn" onclick="addDailyPromoComparison()">＋ Bandingkan Promo</button>
-          <span class="daily-compare-tag" id="p12d-compare-tag"><span id="p12d-compare-label"></span><button onclick="removeDailyPromoComparison()" title="Hapus perbandingan">×</button></span>
-        </div>
       </div>
       <div>
         <label class="fl" for="p12d-date-from">Dari Tanggal</label>
@@ -1075,6 +1073,10 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
         <input type="date" class="fc" id="p12d-date-to" onchange="onDailyPromoDateFilter()">
       </div>
       <button class="btn btn-s btn-sm" style="align-self:flex-end;height:42px" onclick="resetDailyPromoFilter()">↺ Reset Filter</button>
+      </div>
+      <div class="daily-compare-row">
+        <button class="btn btn-s btn-sm" id="p12d-compare-btn" onclick="addDailyPromoComparison()">＋ Bandingkan Promo</button>
+        <span class="daily-compare-tag" id="p12d-compare-tag"><span id="p12d-compare-label"></span><button onclick="removeDailyPromoComparison()" title="Hapus perbandingan">×</button></span>
       </div>
     </div>
 
@@ -1230,7 +1232,7 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
 // GITHUB / WEBVIEW CONFIGURATION
 // Tempel URL deployment Apps Script yang berakhiran /exec di bawah ini.
 // ══════════════════════════════════════════════
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzOzaGA58AV5yxxqbANYwAJ_SidaR1ZgYv6zj6xa20NBTWSGvpecYBn4R_Y6wWvil8/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzrVHwKDPgea-C1J8-SY2ETITD8vZqDaMRtSpptBvGrrd-OKy8p3q3_jNt6ujy7K4oR/exec';
 
 // Cross-domain bridge. Bentuk pemanggilannya tetap kompatibel dengan
 // google.script.run sehingga fungsi dashboard yang lain tidak perlu diubah.
@@ -1262,7 +1264,7 @@ const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzOzaGA58AV5yxx
     const callbackName = '__gasApiCallback_' + Date.now() + '_' + (++callbackSequence);
     const script = document.createElement('script');
     let finished = false;
-    const timeout = setTimeout(()=>finish(new Error('Koneksi ke Apps Script timeout. Periksa URL deployment dan izin aksesnya.')),45000);
+    const timeout = setTimeout(()=>finish(new Error('Permintaan data belum selesai dimuat. Periksa deployment Apps Script dan coba refresh.')),120000);
 
     function cleanup(){
       clearTimeout(timeout);
@@ -1476,6 +1478,14 @@ function setDailyGlobalFilterState(isDaily){
   if(isDaily){
     if(!S.dailyGlobalLock){
       S.dailyGlobalLock={month:monthEl.value,year:yearEl.value,compare:compareEl.value};
+      const now=new Date();
+      const year=now.getFullYear(),month=now.getMonth()+1;
+      const lastDay=new Date(year,month,0).getDate();
+      S.p12Daily.tableDateFrom=`${year}-${String(month).padStart(2,'0')}-01`;
+      S.p12Daily.tableDateTo=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+      const fromEl=document.getElementById('p12d-date-from'),toEl=document.getElementById('p12d-date-to');
+      if(fromEl) fromEl.value=S.p12Daily.tableDateFrom;
+      if(toEl) toEl.value=S.p12Daily.tableDateTo;
     }
     const now=new Date();
     monthEl.value=String(now.getMonth()+1);
@@ -2392,7 +2402,10 @@ function loadP11(req) {
 function loadP12Daily(req){
   if(S.charts['c-p12d']){S.charts['c-p12d'].destroy();delete S.charts['c-p12d'];}
   document.getElementById('c-p12d').innerHTML='<div class="loading"><div class="spin"></div><div>Memuat data bulan berjalan...</div></div>';
-  document.getElementById('p12d-tbody').innerHTML='<tr><td><div class="empty">Menyiapkan pivot table...</div></td></tr>';
+  document.getElementById('p12d-hr1').innerHTML='<th>Nama Item</th>';
+  document.getElementById('p12d-hr2').innerHTML='';
+  document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="loading" style="min-height:150px"><div class="spin"></div><div>Menyiapkan pivot table...</div></div></td></tr>';
+  document.getElementById('p12d-tfoot').innerHTML='';
   google.script.run
     .withSuccessHandler(d=>{
       if(d.error){ toast('err', d.error); return; }
@@ -2412,6 +2425,8 @@ function loadP12Daily(req){
     })
     .withFailureHandler(e=>{
       document.getElementById('c-p12d').innerHTML='<div class="empty">Gagal memuat Daily Promotion</div>';
+      document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="empty">Gagal memuat Daily Promotion</div></td></tr>';
+      document.getElementById('p12d-item-info').textContent='';
       toast('err', e.message || String(e));
     })
     .getDashboardData({ ...req, page:'dailyPromo' });
