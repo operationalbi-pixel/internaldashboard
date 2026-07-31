@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="bakerzin-build" content="2026-07-31-daily-promotion-audited-v4">
+<meta name="bakerzin-build" content="2026-07-31-daily-promotion-audited-v5">
 <title>BI</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -293,6 +293,7 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSyst
 #c-p12d .apexcharts-legend{display:flex!important;flex-wrap:nowrap!important;justify-content:center!important;overflow-x:auto!important;overflow-y:hidden!important;white-space:nowrap!important;scrollbar-width:none}
 #c-p12d .apexcharts-legend::-webkit-scrollbar{display:none}
 #c-p12d .apexcharts-legend-series{flex:0 0 auto!important;margin:0 10px!important}
+#c-p12d .daily-label-connectors{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none;overflow:visible}
 #p12d-table-card{position:relative;clear:both}
 .daily-chart-controls{display:flex;align-items:center;justify-content:flex-end;gap:14px;flex-wrap:wrap}
 .daily-sales-toggle{height:32px;display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--ink-2);font-size:11.5px;font-weight:700;cursor:pointer;user-select:none;white-space:nowrap}
@@ -1382,7 +1383,7 @@ const S = {
   msSel:['ALL'],
   meData:[],
   p12D:{db:[], sel:{promo:'All'}},
-  p12Daily:{db:null, selCategory:'All', tableDateFrom:'', tableDateTo:'', showSales:false, loadSeq:0},
+  p12Daily:{db:null, selCategory:'All', tableDateFrom:'', tableDateTo:'', showSales:false, loadSeq:0, labelFrame:0},
   dailyGlobalLock:null
 };
 
@@ -2546,6 +2547,96 @@ function toggleDailySalesSeries(){
   applyDailyPromoFilters();
 }
 
+function scheduleDailyPromoLabelLayout(){
+  if(S.p12Daily.labelFrame) cancelAnimationFrame(S.p12Daily.labelFrame);
+  S.p12Daily.labelFrame=requestAnimationFrame(()=>{
+    S.p12Daily.labelFrame=0;
+    tidyDailyPromoLabels();
+  });
+}
+
+function tidyDailyPromoLabels(){
+  const root=document.getElementById('c-p12d');
+  if(!root)return;
+  root.querySelector('.daily-label-connectors')?.remove();
+  const labels=Array.from(root.querySelectorAll('.apexcharts-datalabel')).filter(label=>
+    String(label.textContent||'').trim() && typeof label.getBBox==='function'
+  );
+  if(!labels.length)return;
+
+  labels.forEach(label=>{
+    if(typeof label.dataset.dailyBaseTransform==='undefined'){
+      label.dataset.dailyBaseTransform=label.getAttribute('transform')||'';
+    }
+    const base=label.dataset.dailyBaseTransform;
+    if(base)label.setAttribute('transform',base);else label.removeAttribute('transform');
+  });
+
+  const rootRect=root.getBoundingClientRect();
+  const markers=Array.from(root.querySelectorAll('.apexcharts-marker')).filter(marker=>{
+    const rect=marker.getBoundingClientRect();
+    return rect.width>0&&rect.height>0;
+  });
+  const overlay=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  overlay.setAttribute('class','daily-label-connectors');
+  overlay.setAttribute('viewBox',`0 0 ${rootRect.width} ${rootRect.height}`);
+  overlay.setAttribute('preserveAspectRatio','none');
+  root.appendChild(overlay);
+
+  const occupied=[];
+  const overlaps=(a,b)=>!(
+    a.right+4<b.left || a.left>b.right+4 ||
+    a.bottom+3<b.top || a.top>b.bottom+3
+  );
+  const shifts=[0,-16,16,-32,32,-48,48];
+
+  labels.sort((a,b)=>{
+    const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
+    return ar.left-br.left||ar.top-br.top;
+  }).forEach(label=>{
+    const baseTransform=label.dataset.dailyBaseTransform||'';
+    const originalRect=label.getBoundingClientRect();
+    let selectedShift=0,selectedRect=originalRect;
+
+    for(const shift of shifts){
+      const transform=`${baseTransform}${baseTransform?' ':''}translate(0 ${shift})`;
+      label.setAttribute('transform',transform);
+      const rect=label.getBoundingClientRect();
+      const inside=rect.top>=rootRect.top+6&&rect.bottom<=rootRect.bottom-6;
+      if(inside&&!occupied.some(other=>overlaps(rect,other))){
+        selectedShift=shift;
+        selectedRect=rect;
+        break;
+      }
+    }
+    occupied.push(selectedRect);
+
+    if(selectedShift!==0&&markers.length){
+      const ox=(originalRect.left+originalRect.right)/2;
+      const oy=(originalRect.top+originalRect.bottom)/2;
+      const marker=markers.reduce((best,current)=>{
+        const rect=current.getBoundingClientRect();
+        const cx=(rect.left+rect.right)/2,cy=(rect.top+rect.bottom)/2;
+        const distance=Math.abs(cx-ox)*3+Math.abs(cy-oy);
+        return !best||distance<best.distance?{element:current,distance}:best;
+      },null)?.element;
+      if(marker){
+        const markerRect=marker.getBoundingClientRect();
+        const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1',String((markerRect.left+markerRect.right)/2-rootRect.left));
+        line.setAttribute('y1',String((markerRect.top+markerRect.bottom)/2-rootRect.top));
+        line.setAttribute('x2',String((selectedRect.left+selectedRect.right)/2-rootRect.left));
+        line.setAttribute('y2',String((selectedShift<0?selectedRect.bottom:selectedRect.top)-rootRect.top));
+        line.setAttribute('stroke',getComputedStyle(label).fill||'#64748B');
+        line.setAttribute('stroke-width','1');
+        line.setAttribute('stroke-linecap','round');
+        line.setAttribute('opacity','.65');
+        overlay.appendChild(line);
+      }
+    }
+  });
+}
+
 function applyDailyPromoFilters(){
   const d = S.p12Daily.db;
   if(!d) return;
@@ -2605,9 +2696,9 @@ function applyDailyPromoFilters(){
     colors.push('#94A3B8');
     widths.push(1.4);
     dashArrays.push(0);
-    markerSizes.push(0);
+    markerSizes.push(3);
     fillTypes.push('gradient');
-    labelColors.push('#64748B');
+    labelColors.push('#94A3B8');
   }
   const promoSeriesIndex=series.length;
   series.push({name:'Promo Sales',type:'area',data:promoSeries});
@@ -2623,13 +2714,16 @@ function applyDailyPromoFilters(){
   colors.push('#EAB308');
   widths.push(1.5);
   dashArrays.push(6);
-  markerSizes.push(0);
+  markerSizes.push(3);
   fillTypes.push('solid');
-  labelColors.push('#B45309');
+  labelColors.push('#EAB308');
 
   // Label ditampilkan bergantian agar Promo Sales dan Kontribusi tidak
   // menumpuk pada tanggal yang sama.
-  const labelStep=allDates.length>24?4:allDates.length>14?3:2;
+  const labelStep=showSales
+    ? (allDates.length>24?5:allDates.length>14?4:3)
+    : (allDates.length>24?4:allDates.length>14?3:2);
+  const labelSeriesIndices=series.map((_,index)=>index);
 
   mkChart('c-p12d', {
     series,
@@ -2637,6 +2731,9 @@ function applyDailyPromoFilters(){
       height:320,
       type:'area',
       events:{
+        mounted:()=>scheduleDailyPromoLabelLayout(),
+        updated:()=>scheduleDailyPromoLabelLayout(),
+        animationEnd:()=>scheduleDailyPromoLabelLayout(),
         dataPointSelection:(event,ctx,config)=>selectDailyPromoDate(config.dataPointIndex,allDates),
         markerClick:(event,ctx,config)=>selectDailyPromoDate(config.dataPointIndex,allDates),
         xAxisLabelClick:(event,ctx,config)=>selectDailyPromoDate(config.labelIndex,allDates)
@@ -2644,22 +2741,27 @@ function applyDailyPromoFilters(){
     },
     colors,
     stroke:{width:widths,curve:'smooth',dashArray:dashArrays,lineCap:'round'},
-    markers:{size:markerSizes,colors:['#fff'],strokeColors:colors,strokeWidth:1.5},
+    markers:{size:markerSizes,colors:colors,strokeColors:'#FFFFFF',strokeWidth:1.5},
     fill:{type:fillTypes,gradient:{type:'vertical',shadeIntensity:.7,opacityFrom:.48,opacityTo:.03,stops:[0,100]}},
     dataLabels:{
       enabled:true,
-      enabledOnSeries:[promoSeriesIndex,contributionSeriesIndex],
+      enabledOnSeries:labelSeriesIndices,
       formatter:(value,opts)=>{
         if(value===null||typeof value==='undefined'||Number(value)===0)return '';
         const pointIndex=opts.dataPointIndex;
         const isContribution=opts.seriesIndex===contributionSeriesIndex;
-        const labelOffset=isContribution?Math.floor(labelStep/2):0;
+        let labelOffset=0;
+        if(showSales){
+          labelOffset=opts.seriesIndex%labelStep;
+        }else{
+          labelOffset=isContribution?Math.floor(labelStep/2):0;
+        }
         if(pointIndex%labelStep!==labelOffset)return '';
         return isContribution?`${Number(value).toFixed(1)}%`:(fmtS(Number(value))||'');
       },
       offsetY:-8,
       style:{fontSize:'9.5px',fontWeight:700,colors:labelColors},
-      background:{enabled:true,foreColor:'#374151',borderRadius:4,padding:4,opacity:.9,borderWidth:1,borderColor:'#E5E7EB'},
+      background:{enabled:false},
       dropShadow:{enabled:false}
     },
     legend:{
