@@ -736,6 +736,43 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
   box-shadow:0 24px 60px rgba(11,15,23,.10);
   border:1px solid var(--border);
 }
+
+/* ══════════════════════════════════════════════
+   UI POLISH — konsisten di semua halaman
+   ══════════════════════════════════════════════ */
+.cc:hover,.tc:hover{box-shadow:var(--sh);border-color:#DDE0E5}
+.kc{transition:box-shadow .2s,border-color .2s,transform .2s}
+.kc:hover{box-shadow:var(--sh);border-color:#DDE0E5;transform:translateY(-1px)}
+.kc:hover .kval{color:var(--kcc,var(--brand))}
+.kval{transition:color .2s}
+.cc-t:not(:empty)::before{content:'';display:inline-block;width:3px;height:12px;background:var(--kcc,var(--brand));border-radius:2px;margin-right:8px;vertical-align:-1px;opacity:.9}
+.tt:not(:empty)::before{content:'';display:inline-block;width:3px;height:12px;background:var(--brand);border-radius:2px;margin-right:8px;vertical-align:-1px;opacity:.9}
+
+/* Tooltip & legend ApexCharts — dipaksa seragam (warna, font, radius, shadow)
+   di semua chart garis pada semua halaman, terlepas dari opsi per-chart */
+.apexcharts-tooltip{
+  font-family:'Plus Jakarta Sans',sans-serif !important;
+  border:1px solid var(--border) !important;
+  border-radius:10px !important;
+  box-shadow:var(--sh-lg) !important;
+  overflow:hidden;
+}
+.apexcharts-tooltip-title{
+  font-family:'Plus Jakarta Sans',sans-serif !important;
+  font-weight:700 !important;
+  background:var(--surface-3) !important;
+  border-bottom:1px solid var(--border) !important;
+}
+.apexcharts-legend-text{
+  font-family:'Plus Jakarta Sans',sans-serif !important;
+  font-size:11.5px !important;font-weight:600 !important;
+  color:var(--ink-2) !important;
+}
+.apexcharts-xaxistooltip,.apexcharts-yaxistooltip{
+  font-family:'Plus Jakarta Sans',sans-serif !important;
+  border-radius:8px !important;
+}
+.apexcharts-menu-item{font-family:'Plus Jakarta Sans',sans-serif !important;font-size:11.5px !important}
 </style>
 </head>
 <body>
@@ -1255,7 +1292,7 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
 // GITHUB / WEBVIEW CONFIGURATION
 // Tempel URL deployment Apps Script yang berakhiran /exec di bawah ini.
 // ══════════════════════════════════════════════
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxHBZSPK7quEYe05rFmy0wK_21fus3pEI4l43AviH6xBp6jcvaOjrqRlhXgr-5exm5V/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-UIuEmBP3c5WvX478Jcm_gZM_5VGd2kYkkAP8WHmwGESA5j-AqFV0XETlf8f1fh00/exec';
 
 // Cross-domain bridge. Bentuk pemanggilannya tetap kompatibel dengan
 // google.script.run sehingga fungsi dashboard yang lain tidak perlu diubah.
@@ -1491,6 +1528,31 @@ function nav(el){
   loadPage(S.page);
 }
 
+// Rentang bulan berjalan (default tampilan awal Daily Promotion).
+function getCurrentMonthRange(){
+  const now=new Date();
+  const year=now.getFullYear(),month=now.getMonth()+1;
+  const lastDay=new Date(year,month,0).getDate();
+  return {
+    dateFrom:`${year}-${String(month).padStart(2,'0')}-01`,
+    dateTo:`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
+  };
+}
+// Jendela data yang DIAMBIL dari server untuk halaman Daily Promotion.
+// Filter utama (bulan) tetap terkunci ke bulan berjalan, tapi sub-filter tanggal
+// pada halaman ini tetap boleh mundur ke bulan-bulan sebelumnya (maks. tidak lebih dari bulan berjalan).
+const DAILY_PROMO_LOOKBACK_MONTHS=11; // 11 bulan lalu + bulan berjalan = jendela 12 bulan
+function getDailyPromoFetchWindow(){
+  const now=new Date();
+  let by=now.getFullYear(), bm=now.getMonth()+1-DAILY_PROMO_LOOKBACK_MONTHS;
+  while(bm<1){bm+=12;by--;}
+  const cur=getCurrentMonthRange();
+  return {
+    dateFrom:`${by}-${String(bm).padStart(2,'0')}-01`,
+    dateTo:cur.dateTo
+  };
+}
+
 function setDailyGlobalFilterState(isDaily){
   const monthEl=document.getElementById('g-month');
   const yearEl=document.getElementById('g-year');
@@ -1501,11 +1563,9 @@ function setDailyGlobalFilterState(isDaily){
   if(isDaily){
     if(!S.dailyGlobalLock){
       S.dailyGlobalLock={month:monthEl.value,year:yearEl.value,compare:compareEl.value};
-      const now=new Date();
-      const year=now.getFullYear(),month=now.getMonth()+1;
-      const lastDay=new Date(year,month,0).getDate();
-      S.p12Daily.tableDateFrom=`${year}-${String(month).padStart(2,'0')}-01`;
-      S.p12Daily.tableDateTo=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+      const cur=getCurrentMonthRange();
+      S.p12Daily.tableDateFrom=cur.dateFrom;
+      S.p12Daily.tableDateTo=cur.dateTo;
       const fromEl=document.getElementById('p12d-date-from'),toEl=document.getElementById('p12d-date-to');
       if(fromEl) fromEl.value=S.p12Daily.tableDateFrom;
       if(toEl) toEl.value=S.p12Daily.tableDateTo;
@@ -2438,6 +2498,7 @@ function loadP12Daily(req){
   document.getElementById('p12d-hr2').innerHTML='';
   document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="loading" style="min-height:150px"><div class="spin"></div><div>Menyiapkan pivot table...</div></div></td></tr>';
   document.getElementById('p12d-tfoot').innerHTML='';
+  const fetchWindow=getDailyPromoFetchWindow();
   google.script.run
     .withSuccessHandler(d=>{
       if(loadSeq!==S.p12Daily.loadSeq)return;
@@ -2462,7 +2523,7 @@ function loadP12Daily(req){
         S.p12Daily.tableDateTo=d.dateTo||'';
       }
       const fromEl=document.getElementById('p12d-date-from'),toEl=document.getElementById('p12d-date-to');
-      [fromEl,toEl].forEach(el=>{el.min=d.dateFrom||'';el.removeAttribute('max');});
+      [fromEl,toEl].forEach(el=>{el.min=d.dateFrom||'';el.max=d.dateTo||'';});
       fromEl.value=S.p12Daily.tableDateFrom;
       toEl.value=S.p12Daily.tableDateTo;
       document.getElementById('p12d-show-sales').checked=!!S.p12Daily.showSales;
@@ -2482,7 +2543,7 @@ function loadP12Daily(req){
       document.getElementById('p12d-item-info').textContent='';
       toast('err', e.message || String(e));
     })
-    .getDashboardData(Object.assign({}, req, {page:'dailyPromo'}, {dateFrom:'', dateTo:''}));
+    .getDashboardData({ ...req, dateFrom:fetchWindow.dateFrom, dateTo:fetchWindow.dateTo, page:'dailyPromo' });
 }
 
 function buildDailyPromoCategoryList(){
@@ -2553,11 +2614,9 @@ function updateDailyPromoComparisonUI(){
 function resetDailyPromoFilter(){
   S.p12Daily.selCategory = 'All';
   S.p12Daily.compareCategory=null;
-  const now=new Date();
-  const year=now.getFullYear(),month=now.getMonth()+1;
-  const lastDay=new Date(year,month,0).getDate();
-  S.p12Daily.tableDateFrom=`${year}-${String(month).padStart(2,'0')}-01`;
-  S.p12Daily.tableDateTo=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+  const cur=getCurrentMonthRange();
+  S.p12Daily.tableDateFrom=cur.dateFrom;
+  S.p12Daily.tableDateTo=cur.dateTo;
   const input = document.getElementById('ci-promo-category');
   if(input) input.value = '';
   document.getElementById('p12d-date-from').value=S.p12Daily.tableDateFrom;
@@ -2573,6 +2632,7 @@ function onDailyPromoDateFilter(){
   let to=document.getElementById('p12d-date-to').value||d.dateTo;
   if(from>to){const swap=from;from=to;to=swap;}
   from=from<d.dateFrom?d.dateFrom:from;
+  to=to>d.dateTo?d.dateTo:to;
   S.p12Daily.tableDateFrom=from;
   S.p12Daily.tableDateTo=to;
   document.getElementById('p12d-date-from').value=from;
@@ -2919,9 +2979,22 @@ function renderDailyPromoPivot(){
   const filteredRows=baseRows.filter(r=>r.date>=dateFrom&&r.date<=dateTo);
   const outletMap={};
   baseRows.forEach(r=>outletMap[r.branchCode]=r.branchName||r.branchCode);
-  const outletSales={};
-  filteredRows.forEach(r=>{outletSales[r.branchCode]=(outletSales[r.branchCode]||0)+(Number(r.sales)||0);});
-  const outlets=Object.keys(outletMap).sort((a,b)=>(outletSales[a]||0)-(outletSales[b]||0)||outletMap[a].localeCompare(outletMap[b]));
+
+  // Total value per outlet pada periode terpilih, dipakai untuk urutan kolom.
+  const outletTotals={};
+  Object.keys(outletMap).forEach(code=>outletTotals[code]={qty:0,sales:0});
+  filteredRows.forEach(r=>{
+    if(!outletTotals[r.branchCode]) outletTotals[r.branchCode]={qty:0,sales:0};
+    outletTotals[r.branchCode].qty+=Number(r.qty)||0;
+    outletTotals[r.branchCode].sales+=Number(r.sales)||0;
+  });
+
+  // Urutan kolom outlet: Kiri -> Kanan = Total Value tertinggi -> terendah.
+  const outlets=Object.keys(outletMap).sort((a,b)=>
+    (outletTotals[b].sales-outletTotals[a].sales) ||
+    (outletTotals[b].qty-outletTotals[a].qty) ||
+    outletMap[a].localeCompare(outletMap[b])
+  );
   const itemMap={};
 
   filteredRows.forEach(r=>{
