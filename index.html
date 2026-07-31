@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="bakerzin-build" content="2026-07-31-daily-promotion-audited-v1">
 <title>BI</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -280,6 +281,8 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSyst
   cursor:not-allowed;
   opacity:.72;
   box-shadow:none;
+  pointer-events:none;
+  user-select:none;
 }
 #global-filters.daily-locked #main-year-wrap label{color:var(--ink-4)!important;opacity:.72}
 .daily-filter-grid{display:grid;grid-template-columns:minmax(280px,1fr) 180px 180px auto;gap:12px;align-items:end;width:100%}
@@ -288,7 +291,10 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSyst
 .daily-compare-tag.show{display:inline-flex}
 .daily-compare-tag button{border:none;background:transparent;color:inherit;font-size:14px;line-height:1;cursor:pointer}
 .loading{width:100%;min-height:260px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;color:var(--ink-3);font-size:12.5px;font-weight:600}
-#c-p12d .loading{height:100%;min-height:300px}
+#p12d-chart-card{overflow:hidden}
+#c-p12d{position:relative;height:320px;min-height:320px;overflow:hidden;isolation:isolate}
+#c-p12d .loading{position:absolute;inset:0;z-index:5;height:100%;min-height:0;background:var(--surface)}
+#p12d-table-card{position:relative;clear:both}
 @media(max-width:980px){.daily-filter-grid{grid-template-columns:1fr 1fr}.daily-filter-category{grid-column:1/-1}}
 @media(max-width:620px){.daily-filter-grid{grid-template-columns:1fr}.daily-filter-category{grid-column:auto}}
 
@@ -1087,12 +1093,12 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
       <div class="kc" style="--kcc:var(--warn)"><div class="klbl">QTY Sold</div><div class="kval" id="p12dk3"></div><div class="ksub" id="p12dk3s"></div></div>
     </div>
 
-    <div class="cc" style="margin-bottom:20px">
+    <div class="cc" id="p12d-chart-card" style="margin-bottom:20px">
       <div class="cc-h"><div><div class="cc-t">Promo Sales vs Sales</div><div class="cc-s" id="p12d-cdesc"></div></div><div class="cc-s">Klik tanggal pada grafik untuk memfilter tabel</div></div>
       <div id="c-p12d" class="ch h320"></div>
     </div>
 
-    <div class="tc">
+    <div class="tc" id="p12d-table-card">
       <div class="th"><div><div class="tt">Detail Item by Outlet</div><div class="cc-s" id="p12d-item-info"></div></div></div>
       <div class="tw">
         <table id="p12d-table">
@@ -1371,7 +1377,7 @@ const S = {
   msSel:['ALL'],
   meData:[],
   p12D:{db:[], sel:{promo:'All'}},
-  p12Daily:{db:null, selCategory:'All', compareCategory:null, tableDateFrom:'', tableDateTo:''},
+  p12Daily:{db:null, selCategory:'All', compareCategory:null, tableDateFrom:'', tableDateTo:'', loadSeq:0},
   dailyGlobalLock:null
 };
 
@@ -1595,6 +1601,9 @@ function getMonthRange() {
 function mkChart(id, opts) {
   if(S.charts[id]) { S.charts[id].destroy(); delete S.charts[id]; }
   const ctx = document.getElementById(id); if(!ctx) return;
+  // ApexCharts menambahkan canvas ke container. Bersihkan placeholder loading
+  // dan canvas lama terlebih dahulu agar tinggi chart tidak menjadi bertumpuk.
+  ctx.replaceChildren();
   S.charts[id] = new ApexCharts(ctx, opts); S.charts[id].render();
 }
 
@@ -1748,6 +1757,9 @@ function buildCmpTable(tId, data, req, fn, opts={}) {
 // DATA LOADING ROUTER
 // ══════════════════════════════════════════════
 function loadPage(pg){
+  // Tegakkan status filter utama pada setiap pemuatan halaman, termasuk
+  // refresh data dan perubahan pilihan outlet.
+  setDailyGlobalFilterState(pg === 'p12d');
   const req = getActiveReqParams();
   switch(pg){
     case 'p1': loadP1(req); break;
@@ -2400,17 +2412,35 @@ function loadP11(req) {
 // P12D: DAILY PROMOTION
 // ══════════════════════════════════════════════
 function loadP12Daily(req){
+  const loadSeq=++S.p12Daily.loadSeq;
   if(S.charts['c-p12d']){S.charts['c-p12d'].destroy();delete S.charts['c-p12d'];}
-  document.getElementById('c-p12d').innerHTML='<div class="loading"><div class="spin"></div><div>Memuat data bulan berjalan...</div></div>';
+  const chartEl=document.getElementById('c-p12d');
+  chartEl.replaceChildren();
+  chartEl.innerHTML='<div class="loading"><div class="spin"></div><div>Memuat data bulan berjalan...</div></div>';
   document.getElementById('p12d-hr1').innerHTML='<th>Nama Item</th>';
   document.getElementById('p12d-hr2').innerHTML='';
   document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="loading" style="min-height:150px"><div class="spin"></div><div>Menyiapkan pivot table...</div></div></td></tr>';
   document.getElementById('p12d-tfoot').innerHTML='';
   google.script.run
     .withSuccessHandler(d=>{
-      if(d.error){ toast('err', d.error); return; }
+      if(loadSeq!==S.p12Daily.loadSeq)return;
+      if(d.error){
+        chartEl.innerHTML='<div class="empty">Gagal memuat Daily Promotion</div>';
+        document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="empty">Gagal memuat Daily Promotion</div></td></tr>';
+        document.getElementById('p12d-item-info').textContent='';
+        toast('err', d.error);
+        return;
+      }
       S.p12Daily.db = d || {daily:[],pivot:[],salesByDate:{},dateLabels:{},categories:[]};
-      if(!S.p12Daily.tableDateFrom || S.p12Daily.tableDateFrom < d.dateFrom || S.p12Daily.tableDateFrom > d.dateTo){
+      const invalidDateRange=
+        !S.p12Daily.tableDateFrom ||
+        !S.p12Daily.tableDateTo ||
+        S.p12Daily.tableDateFrom < d.dateFrom ||
+        S.p12Daily.tableDateFrom > d.dateTo ||
+        S.p12Daily.tableDateTo < d.dateFrom ||
+        S.p12Daily.tableDateTo > d.dateTo ||
+        S.p12Daily.tableDateFrom > S.p12Daily.tableDateTo;
+      if(invalidDateRange){
         S.p12Daily.tableDateFrom=d.dateFrom||'';
         S.p12Daily.tableDateTo=d.dateTo||'';
       }
@@ -2424,6 +2454,7 @@ function loadP12Daily(req){
       applyDailyPromoFilters();
     })
     .withFailureHandler(e=>{
+      if(loadSeq!==S.p12Daily.loadSeq)return;
       document.getElementById('c-p12d').innerHTML='<div class="empty">Gagal memuat Daily Promotion</div>';
       document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="empty">Gagal memuat Daily Promotion</div></td></tr>';
       document.getElementById('p12d-item-info').textContent='';
