@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="bakerzin-build" content="2026-07-31-daily-promotion-audited-v5">
+<meta name="bakerzin-build" content="2026-07-31-daily-promotion-audited-v6">
 <title>BI</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -286,6 +286,11 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSyst
 }
 #global-filters.daily-locked #main-year-wrap label{color:var(--ink-4)!important;opacity:.72}
 .daily-filter-grid{display:grid;grid-template-columns:minmax(280px,1fr) 180px 180px auto;gap:12px;align-items:end;width:100%}
+.daily-compare-row{display:flex;align-items:center;gap:10px;margin-top:10px;min-height:34px}
+.daily-compare-tag{display:none;align-items:center;gap:8px;max-width:100%;padding:6px 10px;border:1px solid #BFDBFE;border-radius:8px;background:#EFF6FF;color:#1E40AF;font-size:11.5px;font-weight:700}
+.daily-compare-tag.show{display:inline-flex}
+.daily-compare-tag span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.daily-compare-tag button{border:0;background:transparent;color:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0}
 .loading{width:100%;min-height:260px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;color:var(--ink-3);font-size:12.5px;font-weight:600}
 #p12d-chart-card{overflow:hidden}
 #c-p12d{position:relative;height:320px;min-height:320px;overflow:hidden;isolation:isolate}
@@ -1084,6 +1089,10 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
       </div>
       <button class="btn btn-s btn-sm" style="align-self:flex-end;height:42px" onclick="resetDailyPromoFilter()">↺ Reset Filter</button>
       </div>
+      <div class="daily-compare-row">
+        <button class="btn btn-s btn-sm" id="p12d-compare-btn" onclick="addDailyPromoComparison()">＋ Bandingkan Promo</button>
+        <span class="daily-compare-tag" id="p12d-compare-tag"><span id="p12d-compare-label"></span><button type="button" aria-label="Hapus perbandingan promo" onclick="removeDailyPromoComparison()">×</button></span>
+      </div>
     </div>
 
     <div class="cr c4" style="margin-bottom:20px">
@@ -1097,7 +1106,9 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
       <div class="cc-h">
         <div><div class="cc-t">Promo Sales vs Sales</div><div class="cc-s" id="p12d-cdesc"></div></div>
         <div class="daily-chart-controls">
-          <label class="daily-sales-toggle" for="p12d-show-sales"><input type="checkbox" id="p12d-show-sales" onchange="toggleDailySalesSeries()"><span>Tampilkan Sales</span></label>
+          <label class="daily-sales-toggle" for="p12d-show-sales"><input type="checkbox" id="p12d-show-sales" onchange="toggleDailyPromoSeries('sales',this.checked)"><span>Sales</span></label>
+          <label class="daily-sales-toggle" for="p12d-show-promo"><input type="checkbox" id="p12d-show-promo" checked onchange="toggleDailyPromoSeries('promo',this.checked)"><span>Promo Sales</span></label>
+          <label class="daily-sales-toggle" for="p12d-show-contribution"><input type="checkbox" id="p12d-show-contribution" checked onchange="toggleDailyPromoSeries('contribution',this.checked)"><span>Kontribusi</span></label>
           <div class="cc-s" style="margin-top:0">Klik tanggal pada grafik untuk memfilter tabel</div>
         </div>
       </div>
@@ -1383,7 +1394,7 @@ const S = {
   msSel:['ALL'],
   meData:[],
   p12D:{db:[], sel:{promo:'All'}},
-  p12Daily:{db:null, selCategory:'All', tableDateFrom:'', tableDateTo:'', showSales:false, loadSeq:0, labelFrame:0},
+  p12Daily:{db:null, selCategory:'All', compareCategory:null, tableDateFrom:'', tableDateTo:'', showSales:false, showPromoSales:true, showContribution:true, loadSeq:0, labelFrame:0},
   dailyGlobalLock:null
 };
 
@@ -2455,7 +2466,13 @@ function loadP12Daily(req){
       fromEl.value=S.p12Daily.tableDateFrom;
       toEl.value=S.p12Daily.tableDateTo;
       document.getElementById('p12d-show-sales').checked=!!S.p12Daily.showSales;
+      document.getElementById('p12d-show-promo').checked=!!S.p12Daily.showPromoSales;
+      document.getElementById('p12d-show-contribution').checked=!!S.p12Daily.showContribution;
+      if(S.p12Daily.compareCategory && !(d.categories||[]).includes(S.p12Daily.compareCategory)){
+        S.p12Daily.compareCategory=null;
+      }
       buildDailyPromoCategoryList();
+      updateDailyPromoComparisonUI();
       applyDailyPromoFilters();
     })
     .withFailureHandler(e=>{
@@ -2504,8 +2521,38 @@ function pickDailyPromoCategory(category){
   applyDailyPromoFilters();
 }
 
+function addDailyPromoComparison(){
+  const selected=S.p12Daily.selCategory;
+  if(selected==='All'){
+    toast('warn','Pilih satu Promo Category terlebih dahulu');
+    return;
+  }
+  S.p12Daily.compareCategory=selected;
+  S.p12Daily.selCategory='All';
+  const input=document.getElementById('ci-promo-category');
+  if(input)input.value='';
+  document.querySelectorAll('#cl-promo-category .combo-item').forEach(el=>el.classList.toggle('sel',el.dataset.v==='All'));
+  updateDailyPromoComparisonUI();
+  applyDailyPromoFilters();
+}
+
+function removeDailyPromoComparison(){
+  S.p12Daily.compareCategory=null;
+  updateDailyPromoComparisonUI();
+  applyDailyPromoFilters();
+}
+
+function updateDailyPromoComparisonUI(){
+  const tag=document.getElementById('p12d-compare-tag');
+  const label=document.getElementById('p12d-compare-label');
+  const category=S.p12Daily.compareCategory;
+  if(label)label.textContent=category?`Dibandingkan: ${category}`:'';
+  if(tag)tag.classList.toggle('show',!!category);
+}
+
 function resetDailyPromoFilter(){
   S.p12Daily.selCategory = 'All';
+  S.p12Daily.compareCategory=null;
   const d=S.p12Daily.db||{};
   S.p12Daily.tableDateFrom=d.dateFrom||'';
   S.p12Daily.tableDateTo=d.dateTo||'';
@@ -2514,6 +2561,7 @@ function resetDailyPromoFilter(){
   document.getElementById('p12d-date-from').value=S.p12Daily.tableDateFrom;
   document.getElementById('p12d-date-to').value=S.p12Daily.tableDateTo;
   document.querySelectorAll('#cl-promo-category .combo-item').forEach(el=>el.classList.toggle('sel',el.dataset.v==='All'));
+  updateDailyPromoComparisonUI();
   applyDailyPromoFilters();
 }
 
@@ -2541,9 +2589,10 @@ function selectDailyPromoDate(index,dates){
   applyDailyPromoFilters();
 }
 
-function toggleDailySalesSeries(){
-  const checkbox=document.getElementById('p12d-show-sales');
-  S.p12Daily.showSales=!!(checkbox&&checkbox.checked);
+function toggleDailyPromoSeries(key,checked){
+  if(key==='sales')S.p12Daily.showSales=!!checked;
+  if(key==='promo')S.p12Daily.showPromoSales=!!checked;
+  if(key==='contribution')S.p12Daily.showContribution=!!checked;
   applyDailyPromoFilters();
 }
 
@@ -2588,7 +2637,12 @@ function tidyDailyPromoLabels(){
     a.right+4<b.left || a.left>b.right+4 ||
     a.bottom+3<b.top || a.top>b.bottom+3
   );
-  const shifts=[0,-16,16,-32,32,-48,48];
+  const offsets=[
+    {x:0,y:0},{x:0,y:-16},{x:0,y:16},
+    {x:-14,y:-28},{x:14,y:-28},{x:-14,y:28},{x:14,y:28},
+    {x:0,y:-44},{x:0,y:44},
+    {x:-24,y:-44},{x:24,y:-44},{x:-24,y:44},{x:24,y:44}
+  ];
 
   labels.sort((a,b)=>{
     const ar=a.getBoundingClientRect(),br=b.getBoundingClientRect();
@@ -2596,22 +2650,29 @@ function tidyDailyPromoLabels(){
   }).forEach(label=>{
     const baseTransform=label.dataset.dailyBaseTransform||'';
     const originalRect=label.getBoundingClientRect();
-    let selectedShift=0,selectedRect=originalRect;
+    let selectedOffset=offsets[0],selectedRect=originalRect,bestScore=Number.POSITIVE_INFINITY;
 
-    for(const shift of shifts){
-      const transform=`${baseTransform}${baseTransform?' ':''}translate(0 ${shift})`;
+    for(const offset of offsets){
+      const transform=`${baseTransform}${baseTransform?' ':''}translate(${offset.x} ${offset.y})`;
       label.setAttribute('transform',transform);
       const rect=label.getBoundingClientRect();
-      const inside=rect.top>=rootRect.top+6&&rect.bottom<=rootRect.bottom-6;
-      if(inside&&!occupied.some(other=>overlaps(rect,other))){
-        selectedShift=shift;
+      const outside=
+        Math.max(0,rootRect.left+5-rect.left)+Math.max(0,rect.right-(rootRect.right-5))+
+        Math.max(0,rootRect.top+5-rect.top)+Math.max(0,rect.bottom-(rootRect.bottom-5));
+      const collisions=occupied.filter(other=>overlaps(rect,other)).length;
+      const score=collisions*10000+outside*100+Math.abs(offset.x)+Math.abs(offset.y);
+      if(score<bestScore){
+        bestScore=score;
+        selectedOffset=offset;
         selectedRect=rect;
-        break;
       }
+      if(score===0)break;
     }
+    label.setAttribute('transform',`${baseTransform}${baseTransform?' ':''}translate(${selectedOffset.x} ${selectedOffset.y})`);
+    selectedRect=label.getBoundingClientRect();
     occupied.push(selectedRect);
 
-    if(selectedShift!==0&&markers.length){
+    if((selectedOffset.x!==0||selectedOffset.y!==0)&&markers.length){
       const ox=(originalRect.left+originalRect.right)/2;
       const oy=(originalRect.top+originalRect.bottom)/2;
       const marker=markers.reduce((best,current)=>{
@@ -2626,7 +2687,7 @@ function tidyDailyPromoLabels(){
         line.setAttribute('x1',String((markerRect.left+markerRect.right)/2-rootRect.left));
         line.setAttribute('y1',String((markerRect.top+markerRect.bottom)/2-rootRect.top));
         line.setAttribute('x2',String((selectedRect.left+selectedRect.right)/2-rootRect.left));
-        line.setAttribute('y2',String((selectedShift<0?selectedRect.bottom:selectedRect.top)-rootRect.top));
+        line.setAttribute('y2',String((selectedOffset.y<0?selectedRect.bottom:selectedRect.top)-rootRect.top));
         line.setAttribute('stroke',getComputedStyle(label).fill||'#64748B');
         line.setAttribute('stroke-width','1');
         line.setAttribute('stroke-linecap','round');
@@ -2650,14 +2711,22 @@ function applyDailyPromoFilters(){
   );
   const promoByDate = {};
   filteredDaily.forEach(r=>promoByDate[r.date] = (promoByDate[r.date] || 0) + (Number(r.promoSales) || 0));
+  const compareCategory=S.p12Daily.compareCategory;
+  const compareRows=compareCategory?(d.daily||[]).filter(r=>
+    inSelectedDateRange(r.date)&&r.category===compareCategory
+  ):[];
+  const compareByDate={};
+  compareRows.forEach(r=>compareByDate[r.date]=(compareByDate[r.date]||0)+(Number(r.promoSales)||0));
 
   const allDates = [...new Set([
     ...Object.keys(d.salesByDate || {}).filter(inSelectedDateRange),
-    ...filteredDaily.map(r=>r.date)
+    ...filteredDaily.map(r=>r.date),
+    ...compareRows.map(r=>r.date)
   ])].sort();
   const promoSeries = [];
   const totalSalesSeries = [];
   const contributionSeries = [];
+  const compareSeries = [];
   let totalPromoSales = 0;
   let totalSales = 0;
 
@@ -2670,6 +2739,8 @@ function applyDailyPromoFilters(){
     promoSeries.push(promoSales > 0 ? promoSales : null);
     totalSalesSeries.push(dailySales);
     contributionSeries.push(promoSales > 0 && dailySales > 0 ? promoSales / dailySales * 100 : null);
+    const compareSales=compareByDate[date]||0;
+    compareSeries.push(compareSales>0?compareSales:null);
   });
 
   const totalQty = filteredDaily.reduce((sum,row)=>sum+(Number(row.qty)||0),0);
@@ -2687,10 +2758,16 @@ function applyDailyPromoFilters(){
   document.getElementById('p12dk3s').textContent = `${itemCount} item`;
 
   const rangeText = dailyPromoRangeLabel(dateFrom,dateTo);
-  document.getElementById('p12d-cdesc').textContent = `${selected === 'All' ? 'Semua Promo Category' : selected}${rangeText ? ' • '+rangeText : ''}`;
+  document.getElementById('p12d-cdesc').textContent =
+    `${selected === 'All' ? 'Semua Promo Category' : selected}`+
+    `${compareCategory ? ' vs '+compareCategory : ''}`+
+    `${rangeText ? ' • '+rangeText : ''}`;
 
   const showSales=!!S.p12Daily.showSales;
+  const showPromoSales=!!S.p12Daily.showPromoSales;
+  const showContribution=!!S.p12Daily.showContribution;
   const series=[],colors=[],widths=[],dashArrays=[],markerSizes=[],fillTypes=[],labelColors=[];
+  let promoSeriesIndex=-1,contributionSeriesIndex=-1,compareSeriesIndex=-1;
   if(showSales){
     series.push({name:'Sales',type:'area',data:totalSalesSeries});
     colors.push('#94A3B8');
@@ -2700,30 +2777,53 @@ function applyDailyPromoFilters(){
     fillTypes.push('gradient');
     labelColors.push('#94A3B8');
   }
-  const promoSeriesIndex=series.length;
-  series.push({name:'Promo Sales',type:'area',data:promoSeries});
-  colors.push(THEME_COLORS[0]);
-  widths.push(2.5);
-  dashArrays.push(0);
-  markerSizes.push(3);
-  fillTypes.push('gradient');
-  labelColors.push(THEME_COLORS[0]);
+  if(showPromoSales){
+    promoSeriesIndex=series.length;
+    series.push({name:'Promo Sales',type:'area',data:promoSeries});
+    colors.push(THEME_COLORS[0]);
+    widths.push(2.5);
+    dashArrays.push(0);
+    markerSizes.push(3);
+    fillTypes.push('gradient');
+    labelColors.push(THEME_COLORS[0]);
+  }
+  if(showContribution){
+    contributionSeriesIndex=series.length;
+    series.push({name:'Kontribusi',type:'line',data:contributionSeries});
+    colors.push('#EAB308');
+    widths.push(1.5);
+    dashArrays.push(6);
+    markerSizes.push(3);
+    fillTypes.push('solid');
+    labelColors.push('#EAB308');
+  }
+  if(compareCategory){
+    compareSeriesIndex=series.length;
+    series.push({name:`Promo ${compareCategory}`,type:'line',data:compareSeries});
+    colors.push(THEME_COLORS[1]);
+    widths.push(2);
+    dashArrays.push(0);
+    markerSizes.push(3);
+    fillTypes.push('solid');
+    labelColors.push(THEME_COLORS[1]);
+  }
 
-  const contributionSeriesIndex=series.length;
-  series.push({name:'Kontribusi',type:'line',data:contributionSeries});
-  colors.push('#EAB308');
-  widths.push(1.5);
-  dashArrays.push(6);
-  markerSizes.push(3);
-  fillTypes.push('solid');
-  labelColors.push('#EAB308');
-
-  // Label ditampilkan bergantian agar Promo Sales dan Kontribusi tidak
-  // menumpuk pada tanggal yang sama.
-  const labelStep=showSales
-    ? (allDates.length>24?5:allDates.length>14?4:3)
-    : (allDates.length>24?4:allDates.length>14?3:2);
   const labelSeriesIndices=series.map((_,index)=>index);
+  const amountSeriesNames=series
+    .filter((_,index)=>index!==contributionSeriesIndex)
+    .map(item=>item.name);
+  const yAxes=[];
+  if(amountSeriesNames.length){
+    yAxes.push({seriesName:amountSeriesNames,labels:{formatter:v=>fmtS(v)}});
+  }
+  if(showContribution){
+    yAxes.push({
+      seriesName:'Kontribusi',
+      opposite:amountSeriesNames.length>0,
+      min:0,
+      labels:{formatter:v=>`${Number(v||0).toFixed(0)}%`}
+    });
+  }
 
   mkChart('c-p12d', {
     series,
@@ -2748,19 +2848,11 @@ function applyDailyPromoFilters(){
       enabledOnSeries:labelSeriesIndices,
       formatter:(value,opts)=>{
         if(value===null||typeof value==='undefined'||Number(value)===0)return '';
-        const pointIndex=opts.dataPointIndex;
         const isContribution=opts.seriesIndex===contributionSeriesIndex;
-        let labelOffset=0;
-        if(showSales){
-          labelOffset=opts.seriesIndex%labelStep;
-        }else{
-          labelOffset=isContribution?Math.floor(labelStep/2):0;
-        }
-        if(pointIndex%labelStep!==labelOffset)return '';
         return isContribution?`${Number(value).toFixed(1)}%`:(fmtS(Number(value))||'');
       },
       offsetY:-8,
-      style:{fontSize:'9.5px',fontWeight:700,colors:labelColors},
+      style:{fontSize:'9px',fontWeight:700,colors:labelColors},
       background:{enabled:false},
       dropShadow:{enabled:false}
     },
@@ -2779,18 +2871,7 @@ function applyDailyPromoFilters(){
       tickAmount:allDates.length ? Math.min(allDates.length,12) : undefined,
       labels:{rotate:-45,rotateAlways:allDates.length>18,hideOverlappingLabels:true}
     },
-    yaxis:[
-      {
-        seriesName:showSales?['Sales','Promo Sales']:['Promo Sales'],
-        labels:{formatter:v=>fmtS(v)}
-      },
-      {
-        seriesName:'Kontribusi',
-        opposite:true,
-        min:0,
-        labels:{formatter:v=>`${Number(v||0).toFixed(0)}%`}
-      }
-    ],
+    yaxis:yAxes,
     tooltip:{
       shared:true,
       intersect:false,
@@ -2799,10 +2880,16 @@ function applyDailyPromoFilters(){
         const sales=totalSalesSeries[dataPointIndex]||0;
         const contribution=contributionSeries[dataPointIndex]||0;
         const salesRow=showSales?`<div style="margin-top:6px;color:#64748B">Sales : <b>${fmtS(sales)||'0'}</b></div>`:'';
+        const promoRow=showPromoSales?`<div style="margin-top:6px;color:${THEME_COLORS[0]}">Promo Sales : <b>${fmtS(promo)||'0'}</b></div>`:'';
+        const contributionRow=showContribution?`<div style="margin-top:6px;color:#EAB308">Kontribusi : <b>${contribution.toFixed(1)}%</b></div>`:'';
+        const compare=compareSeries[dataPointIndex]||0;
+        const compareRow=compareCategory?`<div style="margin-top:6px;color:${THEME_COLORS[1]}">Promo ${escH(compareCategory)} : <b>${fmtS(compare)||'0'}</b></div>`:'';
         return `<div style="padding:12px 14px;min-width:220px;font-family:'Plus Jakarta Sans',sans-serif">
           <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">${escH((d.dateLabels||{})[allDates[dataPointIndex]]||allDates[dataPointIndex]||'')}</div>
-          <div style="color:${THEME_COLORS[0]}">Promo Sales : <b>${fmtS(promo)||'0'}</b> <span style="color:var(--muted)">[${contribution.toFixed(1)}% Kontribusi]</span></div>
           ${salesRow}
+          ${promoRow}
+          ${contributionRow}
+          ${compareRow}
         </div>`;
       }
     },
