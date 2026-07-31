@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="bakerzin-build" content="2026-07-31-daily-promotion-audited-v2">
+<meta name="bakerzin-build" content="2026-07-31-daily-promotion-audited-v4">
 <title>BI</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -290,7 +290,14 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSyst
 #p12d-chart-card{overflow:hidden}
 #c-p12d{position:relative;height:320px;min-height:320px;overflow:hidden;isolation:isolate}
 #c-p12d .loading{position:absolute;inset:0;z-index:5;height:100%;min-height:0;background:var(--surface)}
+#c-p12d .apexcharts-legend{display:flex!important;flex-wrap:nowrap!important;justify-content:center!important;overflow-x:auto!important;overflow-y:hidden!important;white-space:nowrap!important;scrollbar-width:none}
+#c-p12d .apexcharts-legend::-webkit-scrollbar{display:none}
+#c-p12d .apexcharts-legend-series{flex:0 0 auto!important;margin:0 10px!important}
 #p12d-table-card{position:relative;clear:both}
+.daily-chart-controls{display:flex;align-items:center;justify-content:flex-end;gap:14px;flex-wrap:wrap}
+.daily-sales-toggle{height:32px;display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--ink-2);font-size:11.5px;font-weight:700;cursor:pointer;user-select:none;white-space:nowrap}
+.daily-sales-toggle:hover{border-color:#C9CDD4;background:#fff}
+.daily-sales-toggle input{width:15px;height:15px;margin:0;accent-color:var(--brand);cursor:pointer}
 @media(max-width:980px){.daily-filter-grid{grid-template-columns:1fr 1fr}.daily-filter-category{grid-column:1/-1}}
 @media(max-width:620px){.daily-filter-grid{grid-template-columns:1fr}.daily-filter-category{grid-column:auto}}
 
@@ -1086,7 +1093,13 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
     </div>
 
     <div class="cc" id="p12d-chart-card" style="margin-bottom:20px">
-      <div class="cc-h"><div><div class="cc-t">Promo Sales vs Sales</div><div class="cc-s" id="p12d-cdesc"></div></div><div class="cc-s">Klik tanggal pada grafik untuk memfilter tabel</div></div>
+      <div class="cc-h">
+        <div><div class="cc-t">Promo Sales vs Sales</div><div class="cc-s" id="p12d-cdesc"></div></div>
+        <div class="daily-chart-controls">
+          <label class="daily-sales-toggle" for="p12d-show-sales"><input type="checkbox" id="p12d-show-sales" onchange="toggleDailySalesSeries()"><span>Tampilkan Sales</span></label>
+          <div class="cc-s" style="margin-top:0">Klik tanggal pada grafik untuk memfilter tabel</div>
+        </div>
+      </div>
       <div id="c-p12d" class="ch h320"></div>
     </div>
 
@@ -1369,7 +1382,7 @@ const S = {
   msSel:['ALL'],
   meData:[],
   p12D:{db:[], sel:{promo:'All'}},
-  p12Daily:{db:null, selCategory:'All', tableDateFrom:'', tableDateTo:'', loadSeq:0},
+  p12Daily:{db:null, selCategory:'All', tableDateFrom:'', tableDateTo:'', showSales:false, loadSeq:0},
   dailyGlobalLock:null
 };
 
@@ -2440,6 +2453,7 @@ function loadP12Daily(req){
       [fromEl,toEl].forEach(el=>{el.min=d.dateFrom||'';el.max=d.dateTo||'';});
       fromEl.value=S.p12Daily.tableDateFrom;
       toEl.value=S.p12Daily.tableDateTo;
+      document.getElementById('p12d-show-sales').checked=!!S.p12Daily.showSales;
       buildDailyPromoCategoryList();
       applyDailyPromoFilters();
     })
@@ -2513,7 +2527,7 @@ function onDailyPromoDateFilter(){
   S.p12Daily.tableDateTo=to;
   document.getElementById('p12d-date-from').value=from;
   document.getElementById('p12d-date-to').value=to;
-  renderDailyPromoPivot();
+  applyDailyPromoFilters();
 }
 
 function selectDailyPromoDate(index,dates){
@@ -2523,20 +2537,32 @@ function selectDailyPromoDate(index,dates){
   S.p12Daily.tableDateTo=date;
   document.getElementById('p12d-date-from').value=date;
   document.getElementById('p12d-date-to').value=date;
-  renderDailyPromoPivot();
+  applyDailyPromoFilters();
+}
+
+function toggleDailySalesSeries(){
+  const checkbox=document.getElementById('p12d-show-sales');
+  S.p12Daily.showSales=!!(checkbox&&checkbox.checked);
+  applyDailyPromoFilters();
 }
 
 function applyDailyPromoFilters(){
   const d = S.p12Daily.db;
   if(!d) return;
   const selected = S.p12Daily.selCategory;
-  const filteredDaily = (d.daily || []).filter(r=>selected === 'All' || r.category === selected);
+  const dateFrom=S.p12Daily.tableDateFrom||d.dateFrom;
+  const dateTo=S.p12Daily.tableDateTo||d.dateTo;
+  const inSelectedDateRange=date=>date>=dateFrom&&date<=dateTo;
+  const filteredDaily = (d.daily || []).filter(r=>
+    inSelectedDateRange(r.date) &&
+    (selected === 'All' || r.category === selected)
+  );
   const promoByDate = {};
   filteredDaily.forEach(r=>promoByDate[r.date] = (promoByDate[r.date] || 0) + (Number(r.promoSales) || 0));
 
   const allDates = [...new Set([
-    ...Object.keys(d.salesByDate || {}),
-    ...(d.daily||[]).map(r=>r.date)
+    ...Object.keys(d.salesByDate || {}).filter(inSelectedDateRange),
+    ...filteredDaily.map(r=>r.date)
   ])].sort();
   const promoSeries = [];
   const totalSalesSeries = [];
@@ -2549,13 +2575,17 @@ function applyDailyPromoFilters(){
     const dailySales = Number((d.salesByDate || {})[date]) || 0;
     totalPromoSales += promoSales;
     totalSales += dailySales;
-    promoSeries.push(promoSales);
+    // Nilai promo 0 dibuat null agar garis terputus, bukan turun ke angka nol.
+    promoSeries.push(promoSales > 0 ? promoSales : null);
     totalSalesSeries.push(dailySales);
-    contributionSeries.push(dailySales > 0 ? promoSales / dailySales * 100 : 0);
+    contributionSeries.push(promoSales > 0 && dailySales > 0 ? promoSales / dailySales * 100 : null);
   });
 
   const totalQty = filteredDaily.reduce((sum,row)=>sum+(Number(row.qty)||0),0);
-  const filteredPivot=(d.pivot||[]).filter(r=>selected==='All'||r.category===selected);
+  const filteredPivot=(d.pivot||[]).filter(r=>
+    inSelectedDateRange(r.date) &&
+    (selected==='All'||r.category===selected)
+  );
   const itemCount=new Set(filteredPivot.map(r=>r.menu)).size;
   const totalContribution = totalSales > 0 ? totalPromoSales / totalSales : 0;
   document.getElementById('p12dk0').textContent = fmtS(totalPromoSales) || '0';
@@ -2565,16 +2595,41 @@ function applyDailyPromoFilters(){
   document.getElementById('p12dk0s').textContent = selected === 'All' ? 'Semua Promo Category' : selected;
   document.getElementById('p12dk3s').textContent = `${itemCount} item`;
 
-  const rangeText = dailyPromoRangeLabel(d.dateFrom, d.dateTo);
+  const rangeText = dailyPromoRangeLabel(dateFrom,dateTo);
   document.getElementById('p12d-cdesc').textContent = `${selected === 'All' ? 'Semua Promo Category' : selected}${rangeText ? ' • '+rangeText : ''}`;
 
-  const series=[
-    {name:'Sales',type:'area',data:totalSalesSeries},
-    {name:'Promo Sales',type:'area',data:promoSeries},
-    {name:'Kontribusi',type:'line',data:contributionSeries}
-  ];
-  const colors=['#94A3B8',THEME_COLORS[0],'#EAB308'];
-  const widths=[1.4,2.5,1.5];
+  const showSales=!!S.p12Daily.showSales;
+  const series=[],colors=[],widths=[],dashArrays=[],markerSizes=[],fillTypes=[],labelColors=[];
+  if(showSales){
+    series.push({name:'Sales',type:'area',data:totalSalesSeries});
+    colors.push('#94A3B8');
+    widths.push(1.4);
+    dashArrays.push(0);
+    markerSizes.push(0);
+    fillTypes.push('gradient');
+    labelColors.push('#64748B');
+  }
+  const promoSeriesIndex=series.length;
+  series.push({name:'Promo Sales',type:'area',data:promoSeries});
+  colors.push(THEME_COLORS[0]);
+  widths.push(2.5);
+  dashArrays.push(0);
+  markerSizes.push(3);
+  fillTypes.push('gradient');
+  labelColors.push(THEME_COLORS[0]);
+
+  const contributionSeriesIndex=series.length;
+  series.push({name:'Kontribusi',type:'line',data:contributionSeries});
+  colors.push('#EAB308');
+  widths.push(1.5);
+  dashArrays.push(6);
+  markerSizes.push(0);
+  fillTypes.push('solid');
+  labelColors.push('#B45309');
+
+  // Label ditampilkan bergantian agar Promo Sales dan Kontribusi tidak
+  // menumpuk pada tanggal yang sama.
+  const labelStep=allDates.length>24?4:allDates.length>14?3:2;
 
   mkChart('c-p12d', {
     series,
@@ -2588,11 +2643,35 @@ function applyDailyPromoFilters(){
       }
     },
     colors,
-    stroke:{width:widths,curve:'smooth',dashArray:[0,0,6]},
-    markers:{size:[0,3,0],colors:['#fff'],strokeColors:colors,strokeWidth:1.5},
-    fill:{type:['gradient','gradient','solid'],gradient:{type:'vertical',shadeIntensity:.7,opacityFrom:.48,opacityTo:.03,stops:[0,100]}},
-    dataLabels:{enabled:false},
-    legend:{show:true,position:'top',horizontalAlign:'right'},
+    stroke:{width:widths,curve:'smooth',dashArray:dashArrays,lineCap:'round'},
+    markers:{size:markerSizes,colors:['#fff'],strokeColors:colors,strokeWidth:1.5},
+    fill:{type:fillTypes,gradient:{type:'vertical',shadeIntensity:.7,opacityFrom:.48,opacityTo:.03,stops:[0,100]}},
+    dataLabels:{
+      enabled:true,
+      enabledOnSeries:[promoSeriesIndex,contributionSeriesIndex],
+      formatter:(value,opts)=>{
+        if(value===null||typeof value==='undefined'||Number(value)===0)return '';
+        const pointIndex=opts.dataPointIndex;
+        const isContribution=opts.seriesIndex===contributionSeriesIndex;
+        const labelOffset=isContribution?Math.floor(labelStep/2):0;
+        if(pointIndex%labelStep!==labelOffset)return '';
+        return isContribution?`${Number(value).toFixed(1)}%`:(fmtS(Number(value))||'');
+      },
+      offsetY:-8,
+      style:{fontSize:'9.5px',fontWeight:700,colors:labelColors},
+      background:{enabled:true,foreColor:'#374151',borderRadius:4,padding:4,opacity:.9,borderWidth:1,borderColor:'#E5E7EB'},
+      dropShadow:{enabled:false}
+    },
+    legend:{
+      show:true,
+      position:'top',
+      horizontalAlign:'center',
+      floating:false,
+      fontSize:'12px',
+      height:32,
+      itemMargin:{horizontal:12,vertical:0},
+      onItemClick:{toggleDataSeries:false}
+    },
     xaxis:{
       categories:allDates.map(date=>(d.dateLabels || {})[date] || date),
       tickAmount:allDates.length ? Math.min(allDates.length,12) : undefined,
@@ -2600,7 +2679,7 @@ function applyDailyPromoFilters(){
     },
     yaxis:[
       {
-        seriesName:['Sales','Promo Sales'],
+        seriesName:showSales?['Sales','Promo Sales']:['Promo Sales'],
         labels:{formatter:v=>fmtS(v)}
       },
       {
@@ -2617,10 +2696,11 @@ function applyDailyPromoFilters(){
         const promo=promoSeries[dataPointIndex]||0;
         const sales=totalSalesSeries[dataPointIndex]||0;
         const contribution=contributionSeries[dataPointIndex]||0;
+        const salesRow=showSales?`<div style="margin-top:6px;color:#64748B">Sales : <b>${fmtS(sales)||'0'}</b></div>`:'';
         return `<div style="padding:12px 14px;min-width:220px;font-family:'Plus Jakarta Sans',sans-serif">
           <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">${escH((d.dateLabels||{})[allDates[dataPointIndex]]||allDates[dataPointIndex]||'')}</div>
           <div style="color:${THEME_COLORS[0]}">Promo Sales : <b>${fmtS(promo)||'0'}</b> <span style="color:var(--muted)">[${contribution.toFixed(1)}% Kontribusi]</span></div>
-          <div style="margin-top:6px;color:#64748B">Sales : <b>${fmtS(sales)||'0'}</b></div>
+          ${salesRow}
         </div>`;
       }
     },
