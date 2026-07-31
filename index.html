@@ -1255,7 +1255,7 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
 // GITHUB / WEBVIEW CONFIGURATION
 // Tempel URL deployment Apps Script yang berakhiran /exec di bawah ini.
 // ══════════════════════════════════════════════
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHLY7KuxlP5g8DuxM5iyKcDy7WMcFRRG4PaTLRwP360zB60bhydekqg_VpRinFIWZF/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxHBZSPK7quEYe05rFmy0wK_21fus3pEI4l43AviH6xBp6jcvaOjrqRlhXgr-5exm5V/exec';
 
 // Cross-domain bridge. Bentuk pemanggilannya tetap kompatibel dengan
 // google.script.run sehingga fungsi dashboard yang lain tidak perlu diubah.
@@ -2462,7 +2462,7 @@ function loadP12Daily(req){
         S.p12Daily.tableDateTo=d.dateTo||'';
       }
       const fromEl=document.getElementById('p12d-date-from'),toEl=document.getElementById('p12d-date-to');
-      [fromEl,toEl].forEach(el=>{el.min=d.dateFrom||'';el.max=d.dateTo||'';});
+      [fromEl,toEl].forEach(el=>{el.min=d.dateFrom||'';el.removeAttribute('max');});
       fromEl.value=S.p12Daily.tableDateFrom;
       toEl.value=S.p12Daily.tableDateTo;
       document.getElementById('p12d-show-sales').checked=!!S.p12Daily.showSales;
@@ -2482,7 +2482,7 @@ function loadP12Daily(req){
       document.getElementById('p12d-item-info').textContent='';
       toast('err', e.message || String(e));
     })
-    .getDashboardData({ ...req, page:'dailyPromo' });
+    .getDashboardData(Object.assign({}, req, {page:'dailyPromo'}, {dateFrom:'', dateTo:''}));
 }
 
 function buildDailyPromoCategoryList(){
@@ -2571,7 +2571,6 @@ function onDailyPromoDateFilter(){
   let to=document.getElementById('p12d-date-to').value||d.dateTo;
   if(from>to){const swap=from;from=to;to=swap;}
   from=from<d.dateFrom?d.dateFrom:from;
-  to=to>d.dateTo?d.dateTo:to;
   S.p12Daily.tableDateFrom=from;
   S.p12Daily.tableDateTo=to;
   document.getElementById('p12d-date-from').value=from;
@@ -2918,7 +2917,9 @@ function renderDailyPromoPivot(){
   const filteredRows=baseRows.filter(r=>r.date>=dateFrom&&r.date<=dateTo);
   const outletMap={};
   baseRows.forEach(r=>outletMap[r.branchCode]=r.branchName||r.branchCode);
-  const outlets=Object.keys(outletMap).sort((a,b)=>outletMap[a].localeCompare(outletMap[b]));
+  const outletSales={};
+  baseRows.forEach(r=>{outletSales[r.branchCode]=(outletSales[r.branchCode]||0)+(Number(r.sales)||0);});
+  const outlets=Object.keys(outletMap).sort((a,b)=>(outletSales[a]||0)-(outletSales[b]||0)||outletMap[a].localeCompare(outletMap[b]));
   const itemMap={};
 
   filteredRows.forEach(r=>{
