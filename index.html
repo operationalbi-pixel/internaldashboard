@@ -271,26 +271,6 @@ html,body{height:100%;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSyst
 }
 .flt:hover{border-color:#C9CDD4}
 .flt:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(30,58,95,.10)}
-#global-filters.daily-locked #g-month,
-#global-filters.daily-locked #g-year,
-#global-filters.daily-locked #g-year-comp{
-  background:var(--surface-3);
-  color:var(--ink-4);
-  border-color:var(--border);
-  cursor:not-allowed;
-  opacity:.72;
-  box-shadow:none;
-}
-#global-filters.daily-locked #main-year-wrap label{color:var(--ink-4)!important;opacity:.72}
-.daily-filter-grid{display:grid;grid-template-columns:minmax(280px,1fr) 180px 180px auto;gap:12px;align-items:end;width:100%}
-.daily-compare-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
-.daily-compare-tag{display:none;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700}
-.daily-compare-tag.show{display:inline-flex}
-.daily-compare-tag button{border:none;background:transparent;color:inherit;font-size:14px;line-height:1;cursor:pointer}
-.loading{width:100%;min-height:260px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;color:var(--ink-3);font-size:12.5px;font-weight:600}
-#c-p12d .loading{height:100%;min-height:300px}
-@media(max-width:980px){.daily-filter-grid{grid-template-columns:1fr 1fr}.daily-filter-category{grid-column:1/-1}}
-@media(max-width:620px){.daily-filter-grid{grid-template-columns:1fr}.daily-filter-category{grid-column:auto}}
 
 /* Multi-select outlet */
 .ms-wrap{position:relative;width:208px}
@@ -1055,29 +1035,15 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
       </div>
     </div>
 
-    <div style="margin-bottom:20px;padding:20px 22px;background:var(--card);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--sh)">
-      <div class="daily-filter-grid">
-      <div class="daily-filter-category">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px;padding:24px;background:var(--card);border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--sh)">
+      <div style="width:min(520px,100%)">
         <label class="fl" for="ci-promo-category">Promo Category</label>
         <div class="combo-wrap">
           <input type="text" class="fc w-full" id="ci-promo-category" placeholder="Cari promo category..." oninput="filterDailyPromoCombo()" onfocus="openDailyPromoCombo()" onblur="closeDailyPromoCombo()" autocomplete="off">
           <div class="combo-list" id="cl-promo-category"></div>
         </div>
       </div>
-      <div>
-        <label class="fl" for="p12d-date-from">Dari Tanggal</label>
-        <input type="date" class="fc" id="p12d-date-from" onchange="onDailyPromoDateFilter()">
-      </div>
-      <div>
-        <label class="fl" for="p12d-date-to">Sampai Tanggal</label>
-        <input type="date" class="fc" id="p12d-date-to" onchange="onDailyPromoDateFilter()">
-      </div>
       <button class="btn btn-s btn-sm" style="align-self:flex-end;height:42px" onclick="resetDailyPromoFilter()">↺ Reset Filter</button>
-      </div>
-      <div class="daily-compare-row">
-        <button class="btn btn-s btn-sm" id="p12d-compare-btn" onclick="addDailyPromoComparison()">＋ Bandingkan Promo</button>
-        <span class="daily-compare-tag" id="p12d-compare-tag"><span id="p12d-compare-label"></span><button onclick="removeDailyPromoComparison()" title="Hapus perbandingan">×</button></span>
-      </div>
     </div>
 
     <div class="cr c4" style="margin-bottom:20px">
@@ -1088,15 +1054,15 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
     </div>
 
     <div class="cc" style="margin-bottom:20px">
-      <div class="cc-h"><div><div class="cc-t">Promo Sales vs Sales</div><div class="cc-s" id="p12d-cdesc"></div></div><div class="cc-s">Klik tanggal pada grafik untuk memfilter tabel</div></div>
+      <div class="cc-h"><div><div class="cc-t">Daily Promo Sales & Kontribusi</div><div class="cc-s" id="p12d-cdesc"></div></div></div>
       <div id="c-p12d" class="ch h320"></div>
     </div>
 
     <div class="tc">
-      <div class="th"><div><div class="tt">Detail Item by Outlet</div><div class="cc-s" id="p12d-item-info"></div></div></div>
+      <div class="th"><div><div class="tt">Detail Item</div><div class="cc-s" id="p12d-item-info"></div></div></div>
       <div class="tw">
         <table id="p12d-table">
-          <thead><tr id="p12d-hr1"></tr><tr id="p12d-hr2"></tr></thead>
+          <thead><tr><th>Promo Category</th><th>Menu</th><th>Menu Code</th><th class="num">QTY</th><th class="num">Avg Price</th><th class="num">Subtotal</th><th class="num">Discount</th><th class="num">Nett Sales</th><th class="num">Kontribusi</th></tr></thead>
           <tbody id="p12d-tbody"></tbody>
           <tfoot id="p12d-tfoot"></tfoot>
         </table>
@@ -1264,7 +1230,7 @@ const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHLY7KuxlP5g8D
     const callbackName = '__gasApiCallback_' + Date.now() + '_' + (++callbackSequence);
     const script = document.createElement('script');
     let finished = false;
-    const timeout = setTimeout(()=>finish(new Error('Permintaan data belum selesai dimuat. Periksa deployment Apps Script dan coba refresh.')),120000);
+    const timeout = setTimeout(()=>finish(new Error('Koneksi ke Apps Script timeout. Periksa URL deployment dan izin aksesnya.')),45000);
 
     function cleanup(){
       clearTimeout(timeout);
@@ -1371,8 +1337,7 @@ const S = {
   msSel:['ALL'],
   meData:[],
   p12D:{db:[], sel:{promo:'All'}},
-  p12Daily:{db:null, selCategory:'All', compareCategory:null, tableDateFrom:'', tableDateTo:''},
-  dailyGlobalLock:null
+  p12Daily:{db:null, selCategory:'All'}
 };
 
 function appInit(){
@@ -1459,60 +1424,12 @@ function nav(el){
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('act'));
   el.classList.add('act');
   S.page = el.dataset.page;
-  setDailyGlobalFilterState(S.page === 'p12d');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('act'));
   const targetPage = document.getElementById(S.page);
   if(targetPage) targetPage.classList.add('act');
   
   // Fitur dynamic update Topbar Title telah dihapus karena redudansi
   loadPage(S.page);
-}
-
-function setDailyGlobalFilterState(isDaily){
-  const monthEl=document.getElementById('g-month');
-  const yearEl=document.getElementById('g-year');
-  const compareEl=document.getElementById('g-year-comp');
-  const filters=document.getElementById('global-filters');
-  if(!monthEl||!yearEl||!compareEl||!filters) return;
-
-  if(isDaily){
-    if(!S.dailyGlobalLock){
-      S.dailyGlobalLock={month:monthEl.value,year:yearEl.value,compare:compareEl.value};
-      const now=new Date();
-      const year=now.getFullYear(),month=now.getMonth()+1;
-      const lastDay=new Date(year,month,0).getDate();
-      S.p12Daily.tableDateFrom=`${year}-${String(month).padStart(2,'0')}-01`;
-      S.p12Daily.tableDateTo=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
-      const fromEl=document.getElementById('p12d-date-from'),toEl=document.getElementById('p12d-date-to');
-      if(fromEl) fromEl.value=S.p12Daily.tableDateFrom;
-      if(toEl) toEl.value=S.p12Daily.tableDateTo;
-    }
-    const now=new Date();
-    monthEl.value=String(now.getMonth()+1);
-    yearEl.value=String(now.getFullYear());
-    compareEl.value='';
-    monthEl.disabled=true;
-    yearEl.disabled=true;
-    compareEl.disabled=true;
-    filters.classList.add('daily-locked');
-    document.getElementById('main-year-wrap').style.display='flex';
-    document.getElementById('custom-wrap').style.display='none';
-    return;
-  }
-
-  if(S.dailyGlobalLock){
-    monthEl.value=S.dailyGlobalLock.month;
-    yearEl.value=S.dailyGlobalLock.year;
-    compareEl.value=S.dailyGlobalLock.compare;
-    S.dailyGlobalLock=null;
-  }
-  monthEl.disabled=false;
-  yearEl.disabled=false;
-  compareEl.disabled=false;
-  filters.classList.remove('daily-locked');
-  const isCustom=monthEl.value==='CUSTOM';
-  document.getElementById('main-year-wrap').style.display=isCustom?'none':'flex';
-  document.getElementById('custom-wrap').style.display=isCustom?'flex':'none';
 }
 
 // ══════════════════════════════════════════════
@@ -2400,35 +2317,14 @@ function loadP11(req) {
 // P12D: DAILY PROMOTION
 // ══════════════════════════════════════════════
 function loadP12Daily(req){
-  if(S.charts['c-p12d']){S.charts['c-p12d'].destroy();delete S.charts['c-p12d'];}
-  document.getElementById('c-p12d').innerHTML='<div class="loading"><div class="spin"></div><div>Memuat data bulan berjalan...</div></div>';
-  document.getElementById('p12d-hr1').innerHTML='<th>Nama Item</th>';
-  document.getElementById('p12d-hr2').innerHTML='';
-  document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="loading" style="min-height:150px"><div class="spin"></div><div>Menyiapkan pivot table...</div></div></td></tr>';
-  document.getElementById('p12d-tfoot').innerHTML='';
   google.script.run
     .withSuccessHandler(d=>{
       if(d.error){ toast('err', d.error); return; }
-      S.p12Daily.db = d || {daily:[],pivot:[],salesByDate:{},dateLabels:{},categories:[]};
-      if(!S.p12Daily.tableDateFrom || S.p12Daily.tableDateFrom < d.dateFrom || S.p12Daily.tableDateFrom > d.dateTo){
-        S.p12Daily.tableDateFrom=d.dateFrom||'';
-        S.p12Daily.tableDateTo=d.dateTo||'';
-      }
-      const fromEl=document.getElementById('p12d-date-from'),toEl=document.getElementById('p12d-date-to');
-      [fromEl,toEl].forEach(el=>{el.min=d.dateFrom||'';el.max=d.dateTo||'';});
-      fromEl.value=S.p12Daily.tableDateFrom;
-      toEl.value=S.p12Daily.tableDateTo;
-      if(S.p12Daily.compareCategory && !(d.categories||[]).includes(S.p12Daily.compareCategory)) S.p12Daily.compareCategory=null;
+      S.p12Daily.db = d || {daily:[],items:[],salesByDate:{},dateLabels:{},categories:[]};
       buildDailyPromoCategoryList();
-      updateDailyPromoComparisonUI();
       applyDailyPromoFilters();
     })
-    .withFailureHandler(e=>{
-      document.getElementById('c-p12d').innerHTML='<div class="empty">Gagal memuat Daily Promotion</div>';
-      document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="empty">Gagal memuat Daily Promotion</div></td></tr>';
-      document.getElementById('p12d-item-info').textContent='';
-      toast('err', e.message || String(e));
-    })
+    .withFailureHandler(e=>toast('err', e.message || String(e)))
     .getDashboardData({ ...req, page:'dailyPromo' });
 }
 
@@ -2467,69 +2363,12 @@ function pickDailyPromoCategory(category){
   document.querySelectorAll('#cl-promo-category .combo-item').forEach(el=>el.classList.toggle('sel',el.dataset.v===S.p12Daily.selCategory));
   applyDailyPromoFilters();
 }
-
-function addDailyPromoComparison(){
-  const selected=S.p12Daily.selCategory;
-  if(selected==='All'){toast('warn','Pilih satu Promo Category terlebih dahulu');return;}
-  S.p12Daily.compareCategory=selected;
-  S.p12Daily.selCategory='All';
-  document.getElementById('ci-promo-category').value='';
-  document.querySelectorAll('#cl-promo-category .combo-item').forEach(el=>el.classList.toggle('sel',el.dataset.v==='All'));
-  updateDailyPromoComparisonUI();
-  applyDailyPromoFilters();
-}
-
-function removeDailyPromoComparison(){
-  S.p12Daily.compareCategory=null;
-  updateDailyPromoComparisonUI();
-  applyDailyPromoFilters();
-}
-
-function updateDailyPromoComparisonUI(){
-  const tag=document.getElementById('p12d-compare-tag');
-  const label=document.getElementById('p12d-compare-label');
-  const category=S.p12Daily.compareCategory;
-  if(label) label.textContent=category?`Dibandingkan: ${category}`:'';
-  if(tag) tag.classList.toggle('show',!!category);
-}
-
 function resetDailyPromoFilter(){
   S.p12Daily.selCategory = 'All';
-  S.p12Daily.compareCategory = null;
-  const d=S.p12Daily.db||{};
-  S.p12Daily.tableDateFrom=d.dateFrom||'';
-  S.p12Daily.tableDateTo=d.dateTo||'';
   const input = document.getElementById('ci-promo-category');
   if(input) input.value = '';
-  document.getElementById('p12d-date-from').value=S.p12Daily.tableDateFrom;
-  document.getElementById('p12d-date-to').value=S.p12Daily.tableDateTo;
   document.querySelectorAll('#cl-promo-category .combo-item').forEach(el=>el.classList.toggle('sel',el.dataset.v==='All'));
-  updateDailyPromoComparisonUI();
   applyDailyPromoFilters();
-}
-
-function onDailyPromoDateFilter(){
-  const d=S.p12Daily.db;if(!d)return;
-  let from=document.getElementById('p12d-date-from').value||d.dateFrom;
-  let to=document.getElementById('p12d-date-to').value||d.dateTo;
-  if(from>to){const swap=from;from=to;to=swap;}
-  from=from<d.dateFrom?d.dateFrom:from;
-  to=to>d.dateTo?d.dateTo:to;
-  S.p12Daily.tableDateFrom=from;
-  S.p12Daily.tableDateTo=to;
-  document.getElementById('p12d-date-from').value=from;
-  document.getElementById('p12d-date-to').value=to;
-  renderDailyPromoPivot();
-}
-
-function selectDailyPromoDate(index,dates){
-  const date=dates[index];
-  if(!date)return;
-  S.p12Daily.tableDateFrom=date;
-  S.p12Daily.tableDateTo=date;
-  document.getElementById('p12d-date-from').value=date;
-  document.getElementById('p12d-date-to').value=date;
-  renderDailyPromoPivot();
 }
 
 function applyDailyPromoFilters(){
@@ -2537,22 +2376,15 @@ function applyDailyPromoFilters(){
   if(!d) return;
   const selected = S.p12Daily.selCategory;
   const filteredDaily = (d.daily || []).filter(r=>selected === 'All' || r.category === selected);
+  const filteredItems = (d.items || []).filter(r=>selected === 'All' || r.category === selected);
   const promoByDate = {};
   filteredDaily.forEach(r=>promoByDate[r.date] = (promoByDate[r.date] || 0) + (Number(r.promoSales) || 0));
-  const compareByDate={};
-  if(S.p12Daily.compareCategory){
-    (d.daily||[]).filter(r=>r.category===S.p12Daily.compareCategory).forEach(r=>{
-      compareByDate[r.date]=(compareByDate[r.date]||0)+(Number(r.promoSales)||0);
-    });
-  }
 
   const allDates = [...new Set([
     ...Object.keys(d.salesByDate || {}),
-    ...(d.daily||[]).map(r=>r.date)
+    ...filteredDaily.map(r=>r.date)
   ])].sort();
-  const promoSeries = [];
-  const totalSalesSeries = [];
-  const compareSeries = [];
+  const salesSeries = [];
   const contributionSeries = [];
   let totalPromoSales = 0;
   let totalSales = 0;
@@ -2562,53 +2394,33 @@ function applyDailyPromoFilters(){
     const dailySales = Number((d.salesByDate || {})[date]) || 0;
     totalPromoSales += promoSales;
     totalSales += dailySales;
-    promoSeries.push(promoSales);
-    totalSalesSeries.push(dailySales);
-    compareSeries.push(compareByDate[date]||0);
+    salesSeries.push(promoSales);
     contributionSeries.push(dailySales > 0 ? promoSales / dailySales * 100 : 0);
   });
 
-  const totalQty = filteredDaily.reduce((sum,row)=>sum+(Number(row.qty)||0),0);
-  const filteredPivot=(d.pivot||[]).filter(r=>selected==='All'||r.category===selected);
-  const itemCount=new Set(filteredPivot.map(r=>r.menu)).size;
+  const totalQty = filteredItems.reduce((sum,item)=>sum+(Number(item.qty)||0),0);
   const totalContribution = totalSales > 0 ? totalPromoSales / totalSales : 0;
   document.getElementById('p12dk0').textContent = fmtS(totalPromoSales) || '0';
   document.getElementById('p12dk1').textContent = fmtS(totalSales) || '0';
   document.getElementById('p12dk2').textContent = totalContribution > 0 ? fmtPct(totalContribution) : '0%';
   document.getElementById('p12dk3').textContent = fmtAcc(totalQty) || '0';
   document.getElementById('p12dk0s').textContent = selected === 'All' ? 'Semua Promo Category' : selected;
-  document.getElementById('p12dk3s').textContent = `${itemCount} item`;
+  document.getElementById('p12dk3s').textContent = `${filteredItems.length} item`;
 
   const rangeText = dailyPromoRangeLabel(d.dateFrom, d.dateTo);
   document.getElementById('p12d-cdesc').textContent = `${selected === 'All' ? 'Semua Promo Category' : selected}${rangeText ? ' • '+rangeText : ''}`;
-
-  const series=[
-    {name:'Sales',type:'area',data:totalSalesSeries},
-    {name:'Promo Sales',type:'area',data:promoSeries}
-  ];
-  const colors=['#94A3B8',THEME_COLORS[0]];
-  const widths=[1.4,2.5];
-  if(S.p12Daily.compareCategory){
-    series.push({name:`Promo ${S.p12Daily.compareCategory}`,type:'area',data:compareSeries});
-    colors.push(THEME_COLORS[1]);
-    widths.push(2);
-  }
+  document.getElementById('p12d-item-info').textContent = `${filteredItems.length} item${rangeText ? ' • '+rangeText : ''}`;
 
   mkChart('c-p12d', {
-    series,
-    chart:{
-      height:320,
-      type:'area',
-      events:{
-        dataPointSelection:(event,ctx,config)=>selectDailyPromoDate(config.dataPointIndex,allDates),
-        markerClick:(event,ctx,config)=>selectDailyPromoDate(config.dataPointIndex,allDates),
-        xAxisLabelClick:(event,ctx,config)=>selectDailyPromoDate(config.labelIndex,allDates)
-      }
-    },
-    colors,
-    stroke:{width:widths,curve:'smooth'},
-    markers:{size:3,colors:['#fff'],strokeColors:colors,strokeWidth:1.5},
-    fill:{type:'gradient',gradient:{type:'vertical',shadeIntensity:.7,opacityFrom:.48,opacityTo:.03,stops:[0,100]}},
+    series: [
+      {name:'Promo Sales', type:'line', data:salesSeries},
+      {name:'Kontribusi', type:'line', data:contributionSeries}
+    ],
+    chart:{height:320,type:'line'},
+    colors:[THEME_COLORS[0],THEME_COLORS[1]],
+    stroke:{width:[2.2,2],curve:'smooth'},
+    markers:{size:[3,3],colors:['#fff','#fff'],strokeColors:[THEME_COLORS[0],THEME_COLORS[1]],strokeWidth:1.5},
+    fill:{type:'solid',opacity:1},
     dataLabels:{enabled:false},
     legend:{show:true,position:'top',horizontalAlign:'right'},
     xaxis:{
@@ -2616,28 +2428,32 @@ function applyDailyPromoFilters(){
       tickAmount:allDates.length ? Math.min(allDates.length,12) : undefined,
       labels:{rotate:-45,rotateAlways:allDates.length>18,hideOverlappingLabels:true}
     },
-    yaxis:{labels:{formatter:v=>fmtS(v)}},
+    yaxis:[
+      {
+        seriesName:'Promo Sales',
+        title:{text:'Promo Sales'},
+        labels:{formatter:v=>fmtS(v)}
+      },
+      {
+        seriesName:'Kontribusi',
+        opposite:true,
+        min:0,
+        title:{text:'Kontribusi'},
+        labels:{formatter:v=>(Number(v)||0).toFixed(1)+'%'}
+      }
+    ],
     tooltip:{
       shared:true,
       intersect:false,
-      custom:({dataPointIndex})=>{
-        const promo=promoSeries[dataPointIndex]||0;
-        const sales=totalSalesSeries[dataPointIndex]||0;
-        const contribution=contributionSeries[dataPointIndex]||0;
-        const compare=S.p12Daily.compareCategory?compareSeries[dataPointIndex]||0:null;
-        const compareRow=S.p12Daily.compareCategory?`<div style="margin-top:6px;color:${THEME_COLORS[1]}">Promo ${escH(S.p12Daily.compareCategory)} : <b>${fmtS(compare)||'0'}</b></div>`:'';
-        return `<div style="padding:12px 14px;min-width:220px;font-family:'Plus Jakarta Sans',sans-serif">
-          <div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">${escH((d.dateLabels||{})[allDates[dataPointIndex]]||allDates[dataPointIndex]||'')}</div>
-          <div style="color:${THEME_COLORS[0]}">Promo Sales : <b>${fmtS(promo)||'0'}</b> <span style="color:var(--muted)">[${contribution.toFixed(1)}% Kontribusi]</span></div>
-          <div style="margin-top:6px;color:#64748B">Sales : <b>${fmtS(sales)||'0'}</b></div>
-          ${compareRow}
-        </div>`;
-      }
+      y:[
+        {formatter:v=>'Rp '+(fmtAcc(v)||'0')},
+        {formatter:v=>(Number(v)||0).toFixed(2)+'%'}
+      ]
     },
     noData:{text:'Tidak ada data Daily Promotion'}
   });
 
-  renderDailyPromoPivot();
+  renderDailyPromoItems(filteredItems, totalSales);
 }
 
 function dailyPromoRangeLabel(dateFrom,dateTo){
@@ -2650,56 +2466,41 @@ function dailyPromoRangeLabel(dateFrom,dateTo){
   return dateFrom === dateTo ? fmt(dateFrom) : `${fmt(dateFrom)} - ${fmt(dateTo)}`;
 }
 
-function renderDailyPromoPivot(){
-  const d=S.p12Daily.db;if(!d)return;
-  const selected=S.p12Daily.selCategory;
-  const dateFrom=S.p12Daily.tableDateFrom||d.dateFrom;
-  const dateTo=S.p12Daily.tableDateTo||d.dateTo;
-  const baseRows=(d.pivot||[]).filter(r=>selected==='All'||r.category===selected);
-  const filteredRows=baseRows.filter(r=>r.date>=dateFrom&&r.date<=dateTo);
-  const outletMap={};
-  baseRows.forEach(r=>outletMap[r.branchCode]=r.branchName||r.branchCode);
-  const outlets=Object.keys(outletMap).sort((a,b)=>outletMap[a].localeCompare(outletMap[b]));
-  const itemMap={};
+function renderDailyPromoItems(items,totalSales){
+  const rows = [...items].sort((a,b)=>(Number(b.nettSales)||0)-(Number(a.nettSales)||0));
+  const money = value => Number(value) ? 'Rp '+fmtAcc(Number(value)) : '-';
+  document.getElementById('p12d-tbody').innerHTML = rows.map(item=>{
+    const contribution = totalSales > 0 ? (Number(item.nettSales)||0) / totalSales : 0;
+    return `<tr>
+      <td><span class="bdg bdg-r">${escH(item.category)}</span>${item.categoryDetail?`<div style="font-size:10px;color:var(--muted);margin-top:4px">${escH(item.categoryDetail)}</div>`:''}</td>
+      <td style="font-weight:700">${escH(item.menu)}</td>
+      <td><span class="code-tag">${escH(item.menuCode || '-')}</span></td>
+      <td class="num">${fmtAcc(Number(item.qty)||0) || '0'}</td>
+      <td class="num">${money(item.avgPrice)}</td>
+      <td class="num">${money(item.subtotal)}</td>
+      <td class="num" style="color:var(--danger)">${money(item.discount)}</td>
+      <td class="num" style="font-weight:800">${money(item.nettSales)}</td>
+      <td class="num" style="color:var(--info);font-weight:800">${contribution>0?fmtPct(contribution):'0%'}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="9"><div class="empty">Tidak ada detail item Daily Promotion</div></td></tr>`;
 
-  filteredRows.forEach(r=>{
-    if(!itemMap[r.menu]) itemMap[r.menu]={menu:r.menu,outlets:{},qty:0,sales:0};
-    if(!itemMap[r.menu].outlets[r.branchCode]) itemMap[r.menu].outlets[r.branchCode]={qty:0,sales:0};
-    itemMap[r.menu].outlets[r.branchCode].qty+=Number(r.qty)||0;
-    itemMap[r.menu].outlets[r.branchCode].sales+=Number(r.sales)||0;
-    itemMap[r.menu].qty+=Number(r.qty)||0;
-    itemMap[r.menu].sales+=Number(r.sales)||0;
-  });
-  const items=Object.values(itemMap).sort((a,b)=>b.sales-a.sales||b.qty-a.qty||a.menu.localeCompare(b.menu));
-  const hr1=document.getElementById('p12d-hr1'),hr2=document.getElementById('p12d-hr2');
-  hr1.innerHTML='<th rowspan="2" style="vertical-align:middle;min-width:220px">Nama Item</th>';
-  hr2.innerHTML='';
-  outlets.forEach(code=>{
-    hr1.innerHTML+=`<th colspan="2" style="text-align:center">${escH(outletMap[code])}</th>`;
-    hr2.innerHTML+='<th class="num">QTY</th><th class="num" style="border-right:1px solid var(--border)">Sales</th>';
-  });
-  hr1.innerHTML+='<th colspan="2" class="gt-col" style="text-align:center">Grand Total</th>';
-  hr2.innerHTML+='<th class="num gt-col">QTY</th><th class="num gt-col">Sales</th>';
-
-  const grandByOutlet={};outlets.forEach(code=>grandByOutlet[code]={qty:0,sales:0});
-  let grandQty=0,grandSales=0;
-  document.getElementById('p12d-tbody').innerHTML=items.map(item=>{
-    let cells='';
-    outlets.forEach(code=>{
-      const cell=item.outlets[code]||{qty:0,sales:0};
-      grandByOutlet[code].qty+=cell.qty;
-      grandByOutlet[code].sales+=cell.sales;
-      cells+=`<td class="num">${cell.qty?fmtAcc(cell.qty):''}</td><td class="num" style="border-right:1px solid var(--border);font-weight:600">${cell.sales?fmtS(cell.sales):''}</td>`;
-    });
-    grandQty+=item.qty;grandSales+=item.sales;
-    return `<tr><td>${escH(item.menu)}</td>${cells}<td class="num gt-col">${fmtAcc(item.qty)||'0'}</td><td class="num gt-col" style="color:var(--maroon);font-weight:800">${fmtS(item.sales)||'0'}</td></tr>`;
-  }).join('')||`<tr><td colspan="${outlets.length*2+3}"><div class="empty">Tidak ada item pada periode ini</div></td></tr>`;
-
-  let foot='<tr><td>GRAND TOTAL</td>';
-  outlets.forEach(code=>foot+=`<td class="num">${fmtAcc(grandByOutlet[code].qty)||'0'}</td><td class="num" style="border-right:1px solid var(--border)">${fmtS(grandByOutlet[code].sales)||'0'}</td>`);
-  foot+=`<td class="num gt-col">${fmtAcc(grandQty)||'0'}</td><td class="num gt-col" style="color:var(--maroon)">${fmtS(grandSales)||'0'}</td></tr>`;
-  document.getElementById('p12d-tfoot').innerHTML=foot;
-  document.getElementById('p12d-item-info').textContent=`${items.length} item • ${dailyPromoRangeLabel(dateFrom,dateTo)}`;
+  const totals = rows.reduce((acc,item)=>{
+    acc.qty += Number(item.qty)||0;
+    acc.subtotal += Number(item.subtotal)||0;
+    acc.discount += Number(item.discount)||0;
+    acc.nettSales += Number(item.nettSales)||0;
+    return acc;
+  },{qty:0,subtotal:0,discount:0,nettSales:0});
+  const contribution = totalSales > 0 ? totals.nettSales / totalSales : 0;
+  document.getElementById('p12d-tfoot').innerHTML = `<tr>
+    <td colspan="3">GRAND TOTAL</td>
+    <td class="num">${fmtAcc(totals.qty)||'0'}</td>
+    <td class="num">-</td>
+    <td class="num">${money(totals.subtotal)}</td>
+    <td class="num" style="color:var(--danger)">${money(totals.discount)}</td>
+    <td class="num" style="color:var(--maroon)">${money(totals.nettSales)}</td>
+    <td class="num" style="color:var(--info)">${contribution>0?fmtPct(contribution):'0%'}</td>
+  </tr>`;
 }
 
 // ══════════════════════════════════════════════
