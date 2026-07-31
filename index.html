@@ -2553,9 +2553,11 @@ function updateDailyPromoComparisonUI(){
 function resetDailyPromoFilter(){
   S.p12Daily.selCategory = 'All';
   S.p12Daily.compareCategory=null;
-  const d=S.p12Daily.db||{};
-  S.p12Daily.tableDateFrom=d.dateFrom||'';
-  S.p12Daily.tableDateTo=d.dateTo||'';
+  const now=new Date();
+  const year=now.getFullYear(),month=now.getMonth()+1;
+  const lastDay=new Date(year,month,0).getDate();
+  S.p12Daily.tableDateFrom=`${year}-${String(month).padStart(2,'0')}-01`;
+  S.p12Daily.tableDateTo=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
   const input = document.getElementById('ci-promo-category');
   if(input) input.value = '';
   document.getElementById('p12d-date-from').value=S.p12Daily.tableDateFrom;
@@ -2918,7 +2920,7 @@ function renderDailyPromoPivot(){
   const outletMap={};
   baseRows.forEach(r=>outletMap[r.branchCode]=r.branchName||r.branchCode);
   const outletSales={};
-  baseRows.forEach(r=>{outletSales[r.branchCode]=(outletSales[r.branchCode]||0)+(Number(r.sales)||0);});
+  filteredRows.forEach(r=>{outletSales[r.branchCode]=(outletSales[r.branchCode]||0)+(Number(r.sales)||0);});
   const outlets=Object.keys(outletMap).sort((a,b)=>(outletSales[a]||0)-(outletSales[b]||0)||outletMap[a].localeCompare(outletMap[b]));
   const itemMap={};
 
