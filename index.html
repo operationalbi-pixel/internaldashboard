@@ -2,12 +2,12 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="bakerzin-build" content="2026-07-31-daily-promotion-audited-v6">
+<meta name="bakerzin-build" content="2026-08-02-all-pages-fast-cache-v9">
 <title>BI</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-<script src="https://unpkg.com/lucide@latest"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script defer src="https://unpkg.com/lucide@latest"></script>
+<script defer src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 /* ══════════════════════════════════════════════
    DESIGN TOKENS — Modern Elegant Professional
@@ -496,6 +496,15 @@ tfoot td{
 }
 tfoot td.num{text-align:right}
 tfoot td:first-child{position:sticky;left:0;z-index:5}
+#t-p7 .p7-store-col{width:112px;min-width:112px;max-width:112px}
+#t-p7 .p7-channel-col{position:sticky;left:112px;min-width:150px;z-index:6;background:var(--surface);box-shadow:8px 0 12px -12px rgba(15,23,42,.45)}
+#t-p7 thead .p7-store-col{z-index:17;background:var(--surface-3)}
+#t-p7 thead .p7-channel-col{z-index:16;background:var(--surface-3)}
+#t-p7 tbody tr:hover .p7-channel-col{background:var(--surface-2)}
+#t-p7 tfoot .p7-store-col,#t-p7 tfoot .p7-channel-col{background:#EEF2F8;color:var(--accent);z-index:7}
+#t-p7 tfoot tr:first-child td{border-top:2px solid #CBD5E1}
+#t-p7 .p7-channel-total td{font-weight:800;background:#EEF2F8}
+#t-p7 .p7-channel-total td.num{color:var(--ink-1)}
 .empty{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:60px 20px;text-align:center;color:var(--ink-3);gap:10px;
@@ -736,43 +745,6 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
   box-shadow:0 24px 60px rgba(11,15,23,.10);
   border:1px solid var(--border);
 }
-
-/* ══════════════════════════════════════════════
-   UI POLISH — konsisten di semua halaman
-   ══════════════════════════════════════════════ */
-.cc:hover,.tc:hover{box-shadow:var(--sh);border-color:#DDE0E5}
-.kc{transition:box-shadow .2s,border-color .2s,transform .2s}
-.kc:hover{box-shadow:var(--sh);border-color:#DDE0E5;transform:translateY(-1px)}
-.kc:hover .kval{color:var(--kcc,var(--brand))}
-.kval{transition:color .2s}
-.cc-t:not(:empty)::before{content:'';display:inline-block;width:3px;height:12px;background:var(--kcc,var(--brand));border-radius:2px;margin-right:8px;vertical-align:-1px;opacity:.9}
-.tt:not(:empty)::before{content:'';display:inline-block;width:3px;height:12px;background:var(--brand);border-radius:2px;margin-right:8px;vertical-align:-1px;opacity:.9}
-
-/* Tooltip & legend ApexCharts — dipaksa seragam (warna, font, radius, shadow)
-   di semua chart garis pada semua halaman, terlepas dari opsi per-chart */
-.apexcharts-tooltip{
-  font-family:'Plus Jakarta Sans',sans-serif !important;
-  border:1px solid var(--border) !important;
-  border-radius:10px !important;
-  box-shadow:var(--sh-lg) !important;
-  overflow:hidden;
-}
-.apexcharts-tooltip-title{
-  font-family:'Plus Jakarta Sans',sans-serif !important;
-  font-weight:700 !important;
-  background:var(--surface-3) !important;
-  border-bottom:1px solid var(--border) !important;
-}
-.apexcharts-legend-text{
-  font-family:'Plus Jakarta Sans',sans-serif !important;
-  font-size:11.5px !important;font-weight:600 !important;
-  color:var(--ink-2) !important;
-}
-.apexcharts-xaxistooltip,.apexcharts-yaxistooltip{
-  font-family:'Plus Jakarta Sans',sans-serif !important;
-  border-radius:8px !important;
-}
-.apexcharts-menu-item{font-family:'Plus Jakarta Sans',sans-serif !important;font-size:11.5px !important}
 </style>
 </head>
 <body>
@@ -1008,7 +980,7 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
   <div id="p7" class="page">
     <div class="sh"><div><div class="sh-t">Detail <span>Online Sales</span></div><div class="sh-s"></div></div>
       <div class="sh-acts">
-        <select class="flt" id="p7-ch" onchange="loadPage('p7')"><option value="ALL">All Channels</option></select>
+        <select class="flt" id="p7-ch" onchange="loadP7(getActiveReqParams())"><option value="ALL">All Channels</option></select>
         <button class="btn btn-s btn-sm" onclick="exportCSV('p7')">⬇ CSV</button>
       </div>
     </div>
@@ -1292,7 +1264,7 @@ textarea.fc{resize:vertical;min-height:90px;line-height:1.5}
 // GITHUB / WEBVIEW CONFIGURATION
 // Tempel URL deployment Apps Script yang berakhiran /exec di bawah ini.
 // ══════════════════════════════════════════════
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-UIuEmBP3c5WvX478Jcm_gZM_5VGd2kYkkAP8WHmwGESA5j-AqFV0XETlf8f1fh00/exec';
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzHLY7KuxlP5g8DuxM5iyKcDy7WMcFRRG4PaTLRwP360zB60bhydekqg_VpRinFIWZF/exec';
 
 // Cross-domain bridge. Bentuk pemanggilannya tetap kompatibel dengan
 // google.script.run sehingga fungsi dashboard yang lain tidak perlu diubah.
@@ -1309,6 +1281,28 @@ const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-UIuEmBP3c5Wv
     'saveDataPoint'
   ];
   let callbackSequence = 0;
+  const apiResponseCache = new Map();
+  const apiInflight = new Map();
+  const readMethods = new Set(['getOutlets','getDashboardData','getStoreYearData']);
+  const cacheTtlMs = 300000;
+
+  function apiCacheKey(method,args){
+    const cleanArgs=(args||[]).map(arg=>{
+      if(!arg||typeof arg!=='object'||Array.isArray(arg))return arg;
+      const clean={};
+      Object.keys(arg).sort().forEach(key=>{
+        if(key==='forceRefresh')return;
+        const value=arg[key];
+        clean[key]=Array.isArray(value)?value.slice().map(String).sort():value;
+      });
+      return clean;
+    });
+    return method+':'+JSON.stringify(cleanArgs);
+  }
+
+  function clearApiResponseCache(){
+    apiResponseCache.clear();
+  }
 
   function isConfigured(){
     return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_WEB_APP_URL);
@@ -1320,6 +1314,23 @@ const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-UIuEmBP3c5Wv
       setTimeout(()=>onFailure ? onFailure(error) : console.error(error),0);
       return;
     }
+
+    const isRead=readMethods.has(method);
+    const forceRefresh=method==='getDashboardData'&&!!(args&&args[0]&&args[0].forceRefresh);
+    const baseCacheKey=isRead?apiCacheKey(method,args):'';
+    const pendingKey=baseCacheKey+(forceRefresh?':force':'');
+    if(isRead&&!forceRefresh){
+      const cached=apiResponseCache.get(baseCacheKey);
+      if(cached&&Date.now()-cached.time<cacheTtlMs){
+        setTimeout(()=>{if(onSuccess)onSuccess(cached.value);},0);
+        return;
+      }
+    }
+    if(isRead&&apiInflight.has(pendingKey)){
+      apiInflight.get(pendingKey).push({onSuccess,onFailure});
+      return;
+    }
+    if(isRead)apiInflight.set(pendingKey,[{onSuccess,onFailure}]);
 
     const callbackName = '__gasApiCallback_' + Date.now() + '_' + (++callbackSequence);
     const script = document.createElement('script');
@@ -1335,11 +1346,15 @@ const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz-UIuEmBP3c5Wv
       if(finished) return;
       finished = true;
       cleanup();
-      if(error){
-        if(onFailure) onFailure(error); else console.error(error);
-      } else if(onSuccess) {
-        onSuccess(result);
-      }
+      const listeners=isRead?(apiInflight.get(pendingKey)||[{onSuccess,onFailure}]):[{onSuccess,onFailure}];
+      if(isRead)apiInflight.delete(pendingKey);
+      if(!error&&isRead)apiResponseCache.set(baseCacheKey,{time:Date.now(),value:result});
+      if(!error&&!isRead)clearApiResponseCache();
+      listeners.forEach(listener=>{
+        if(error){
+          if(listener.onFailure)listener.onFailure(error);else console.error(error);
+        }else if(listener.onSuccess)listener.onSuccess(result);
+      });
     }
 
     window[callbackName] = payload=>{
@@ -1431,6 +1446,8 @@ const S = {
   msSel:['ALL'],
   meData:[],
   p12D:{db:[], sel:{promo:'All'}},
+  p7Cache:{key:'',data:null,loadedAt:0,loadSeq:0},
+  forceRefreshUntil:0,
   p12Daily:{db:null, selCategory:'All', compareCategory:null, tableDateFrom:'', tableDateTo:'', showSales:false, showPromoSales:true, showContribution:true, loadSeq:0, labelFrame:0},
   dailyGlobalLock:null
 };
@@ -1476,7 +1493,13 @@ function appInit(){
 
 function hideLoading(){const el=document.getElementById('lov');el.style.opacity='0';setTimeout(()=>el.style.display='none',400);}
 function onGlobalFilter(){ loadPage(S.page); }
-function refreshPage(){ loadPage(S.page); }
+function refreshPage(){
+  if(S.page==='p7'){
+    S.p7Cache={key:'',data:null,loadedAt:0,loadSeq:S.p7Cache.loadSeq};
+  }
+  S.forceRefreshUntil=Date.now()+10000;
+  loadPage(S.page);
+}
 
 // ══════════════════════════════════════════════
 // MULTISELECT OUTLET LOGIC
@@ -1528,31 +1551,6 @@ function nav(el){
   loadPage(S.page);
 }
 
-// Rentang bulan berjalan (default tampilan awal Daily Promotion).
-function getCurrentMonthRange(){
-  const now=new Date();
-  const year=now.getFullYear(),month=now.getMonth()+1;
-  const lastDay=new Date(year,month,0).getDate();
-  return {
-    dateFrom:`${year}-${String(month).padStart(2,'0')}-01`,
-    dateTo:`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
-  };
-}
-// Jendela data yang DIAMBIL dari server untuk halaman Daily Promotion.
-// Filter utama (bulan) tetap terkunci ke bulan berjalan, tapi sub-filter tanggal
-// pada halaman ini tetap boleh mundur ke bulan-bulan sebelumnya (maks. tidak lebih dari bulan berjalan).
-const DAILY_PROMO_LOOKBACK_MONTHS=11; // 11 bulan lalu + bulan berjalan = jendela 12 bulan
-function getDailyPromoFetchWindow(){
-  const now=new Date();
-  let by=now.getFullYear(), bm=now.getMonth()+1-DAILY_PROMO_LOOKBACK_MONTHS;
-  while(bm<1){bm+=12;by--;}
-  const cur=getCurrentMonthRange();
-  return {
-    dateFrom:`${by}-${String(bm).padStart(2,'0')}-01`,
-    dateTo:cur.dateTo
-  };
-}
-
 function setDailyGlobalFilterState(isDaily){
   const monthEl=document.getElementById('g-month');
   const yearEl=document.getElementById('g-year');
@@ -1563,9 +1561,11 @@ function setDailyGlobalFilterState(isDaily){
   if(isDaily){
     if(!S.dailyGlobalLock){
       S.dailyGlobalLock={month:monthEl.value,year:yearEl.value,compare:compareEl.value};
-      const cur=getCurrentMonthRange();
-      S.p12Daily.tableDateFrom=cur.dateFrom;
-      S.p12Daily.tableDateTo=cur.dateTo;
+      const now=new Date();
+      const year=now.getFullYear(),month=now.getMonth()+1;
+      const lastDay=new Date(year,month,0).getDate();
+      S.p12Daily.tableDateFrom=`${year}-${String(month).padStart(2,'0')}-01`;
+      S.p12Daily.tableDateTo=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
       const fromEl=document.getElementById('p12d-date-from'),toEl=document.getElementById('p12d-date-to');
       if(fromEl) fromEl.value=S.p12Daily.tableDateFrom;
       if(toEl) toEl.value=S.p12Daily.tableDateTo;
@@ -1649,7 +1649,15 @@ function getActiveReqParams() {
   if(!fetchYrs.includes(y1-1)) fetchYrs.push(y1-1); // Always fetch LY for tables calculations
 
   dispYrs.sort((a,b)=>b-a);
-  return { page: S.page, storeCodes: S.msSel, displayYears: dispYrs, years: fetchYrs, dateFrom, dateTo }; 
+  return {
+    page:S.page,
+    storeCodes:S.msSel,
+    displayYears:dispYrs,
+    years:fetchYrs,
+    dateFrom,
+    dateTo,
+    forceRefresh:Date.now()<S.forceRefreshUntil
+  };
 }
 
 function onPeriodChange() {
@@ -2211,15 +2219,23 @@ function loadP6(req) {
 // ══════════════════════════════════════════════
 function loadP7(req) {
   req = (req && req.displayYears) ? req : getActiveReqParams();
-  google.script.run.withSuccessHandler(d=>{ 
+  const forceRefresh=!!req.forceRefresh;
+  const cacheKey=JSON.stringify({
+    years:(req.years||[]).map(Number).sort((a,b)=>a-b),
+    displayYears:(req.displayYears||[]).map(Number).sort((a,b)=>a-b),
+    storeCodes:(req.storeCodes||['ALL']).map(String).sort()
+  });
+  const render=d=>{
     if(d.error){ toast('err', d.error); return; }
     const [mS, mE] = getMonthRange(); const mCats = []; for(let m=mS;m<=mE;m++) mCats.push(MN[m]);
     const baseYr = req.displayYears[0];
     
     const allCh = new Set();
     Object.values(d[baseYr]||{}).forEach(sd=>{ sd.monthly.forEach(mObj=>{ Object.keys(mObj.channels||{}).forEach(c=>allCh.add(c)); }); });
-    const sSel = document.getElementById('p7-ch'); const currCh = sSel.value; sSel.innerHTML = '<option value="ALL">All Channels</option>';
-    allCh.forEach(c=>{ const op=document.createElement('option'); op.value=c; op.textContent=c; sSel.appendChild(op); }); sSel.value = currCh;
+    const sSel = document.getElementById('p7-ch'); let currCh = sSel.value; sSel.innerHTML = '<option value="ALL">All Channels</option>';
+    allCh.forEach(c=>{ const op=document.createElement('option'); op.value=c; op.textContent=c; sSel.appendChild(op); });
+    if(currCh!=='ALL'&&!allCh.has(currCh))currCh='ALL';
+    sSel.value = currCh;
 
     const showCh = currCh==='ALL' ? [...allCh] : [currCh];
     const onlineValues=[], onlinePct=[];
@@ -2239,7 +2255,7 @@ function loadP7(req) {
     });
 
     const t = document.getElementById('t-p7');
-    let th1=`<tr><th rowspan="1">Store</th><th rowspan="1">Channel</th><th rowspan="1">Tahun</th>`; 
+    let th1=`<tr><th class="p7-store-col" rowspan="1">Store</th><th class="p7-channel-col" rowspan="1">Channel</th><th rowspan="1">Tahun</th>`; 
     for(let m=mS;m<=mE;m++){ th1+=`<th class="num" style="min-width:120px">${MN[m]}</th>`; }
     th1+=`<th class="num gt-col" style="min-width:120px">Grand Total</th></tr>`; t.querySelector('thead').innerHTML=th1;
 
@@ -2267,10 +2283,12 @@ function loadP7(req) {
             for(let m=mS; m<=mE; m++) cGt += (sd.monthly[m].channels[ch]||0);
             chGt[ch] = cGt;
         });
-        const sortedChannels = [...channels].sort((a,b) => chGt[b] - chGt[a]);
+        const sortedChannels = [...channels]
+          .filter(ch=>currCh==='ALL'||ch===currCh)
+          .sort((a,b) => chGt[b] - chGt[a]);
 
         sortedChannels.forEach(ch=>{
-          let row=`<tr><td><span class="code-tag">${code}</span></td><td style="font-weight:700">${ch}</td><td style="font-weight:800;color:var(--muted)">${yr}</td>`;
+          let row=`<tr><td class="p7-store-col"><span class="code-tag">${escH(code)}</span></td><td class="p7-channel-col" style="font-weight:700">${escH(ch)}</td><td style="font-weight:800;color:var(--muted)">${yr}</td>`;
           let gt=0, lyGt=0;
           for(let m=mS;m<=mE;m++){
             const v = sd.monthly[m].channels[ch]||0; gt+=v;
@@ -2284,7 +2302,73 @@ function loadP7(req) {
       });
     });
     t.querySelector('tbody').innerHTML=html||`<tr><td colspan="99" class="empty">Tidak ada data</td></tr>`;
-  }).getDashboardData({ ...req, page: 'online' });
+
+    let footerHtml='';
+    req.displayYears.forEach(yr=>{
+      const channelsForYear=new Set();
+      Object.values(d[yr]||{}).forEach(sd=>{
+        sd.monthly.forEach(mObj=>Object.keys(mObj.channels||{}).forEach(ch=>channelsForYear.add(ch)));
+      });
+      const footerChannels=[...channelsForYear]
+        .filter(ch=>currCh==='ALL'||ch===currCh)
+        .map(ch=>{
+          let grandTotal=0;
+          for(let m=mS;m<=mE;m++){
+            Object.values(d[yr]||{}).forEach(sd=>grandTotal+=Number(sd.monthly[m].channels[ch])||0);
+          }
+          return {ch,grandTotal};
+        })
+        .filter(item=>item.grandTotal>0)
+        .sort((a,b)=>b.grandTotal-a.grandTotal);
+
+      footerChannels.forEach(({ch,grandTotal})=>{
+        let row=`<tr class="p7-channel-total"><td class="p7-store-col">Grand Total</td><td class="p7-channel-col">${escH(ch)}</td><td>${yr}</td>`;
+        for(let m=mS;m<=mE;m++){
+          let value=0,lyValue=0,lmValue=0;
+          Object.values(d[yr]||{}).forEach(sd=>{
+            value+=Number(sd.monthly[m].channels[ch])||0;
+            if(m>0)lmValue+=Number(sd.monthly[m-1].channels[ch])||0;
+          });
+          Object.values(d[yr-1]||{}).forEach(sd=>lyValue+=Number(sd.monthly[m].channels[ch])||0);
+          row+=`<td class="num">${inlineLyLm(value>0?fmtS(value):'',value,lyValue,lmValue)}</td>`;
+        }
+        let lyGrandTotal=0;
+        for(let m=mS;m<=mE;m++){
+          Object.values(d[yr-1]||{}).forEach(sd=>lyGrandTotal+=Number(sd.monthly[m].channels[ch])||0);
+        }
+        row+=`<td class="num gt-col">${inlineLyLm(fmtS(grandTotal),grandTotal,lyGrandTotal,0)}</td></tr>`;
+        footerHtml+=row;
+      });
+    });
+    t.querySelector('tfoot').innerHTML=footerHtml;
+  };
+
+  if(S.p7Cache.key===cacheKey&&S.p7Cache.data&&Date.now()-S.p7Cache.loadedAt<300000){
+    render(S.p7Cache.data);
+    return;
+  }
+
+  const loadSeq=++S.p7Cache.loadSeq;
+  const chartEl=document.getElementById('c-p7');
+  if(chartEl)chartEl.innerHTML='<div class="loading"><div class="spin"></div><div>Memuat Online Sales...</div></div>';
+  const table=document.getElementById('t-p7');
+  if(table){
+    table.querySelector('tbody').innerHTML='<tr><td colspan="99"><div class="loading" style="min-height:150px"><div class="spin"></div><div>Menyiapkan detail channel...</div></div></td></tr>';
+    table.querySelector('tfoot').innerHTML='';
+  }
+  google.script.run
+    .withSuccessHandler(d=>{
+      if(loadSeq!==S.p7Cache.loadSeq)return;
+      if(!d.error)S.p7Cache={key:cacheKey,data:d,loadedAt:Date.now(),loadSeq};
+      render(d);
+    })
+    .withFailureHandler(e=>{
+      if(loadSeq!==S.p7Cache.loadSeq)return;
+      if(chartEl)chartEl.innerHTML='<div class="empty">Gagal memuat Online Sales</div>';
+      if(table)table.querySelector('tbody').innerHTML='<tr><td colspan="99"><div class="empty">Gagal memuat Online Sales</div></td></tr>';
+      toast('err',e.message||String(e));
+    })
+    .getDashboardData({ ...req, page: 'online', forceRefresh });
 }
 
 // ══════════════════════════════════════════════
@@ -2498,7 +2582,6 @@ function loadP12Daily(req){
   document.getElementById('p12d-hr2').innerHTML='';
   document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="loading" style="min-height:150px"><div class="spin"></div><div>Menyiapkan pivot table...</div></div></td></tr>';
   document.getElementById('p12d-tfoot').innerHTML='';
-  const fetchWindow=getDailyPromoFetchWindow();
   google.script.run
     .withSuccessHandler(d=>{
       if(loadSeq!==S.p12Daily.loadSeq)return;
@@ -2543,7 +2626,7 @@ function loadP12Daily(req){
       document.getElementById('p12d-item-info').textContent='';
       toast('err', e.message || String(e));
     })
-    .getDashboardData({ ...req, dateFrom:fetchWindow.dateFrom, dateTo:fetchWindow.dateTo, page:'dailyPromo' });
+    .getDashboardData({ ...req, page:'dailyPromo' });
 }
 
 function buildDailyPromoCategoryList(){
@@ -2614,9 +2697,9 @@ function updateDailyPromoComparisonUI(){
 function resetDailyPromoFilter(){
   S.p12Daily.selCategory = 'All';
   S.p12Daily.compareCategory=null;
-  const cur=getCurrentMonthRange();
-  S.p12Daily.tableDateFrom=cur.dateFrom;
-  S.p12Daily.tableDateTo=cur.dateTo;
+  const d=S.p12Daily.db||{};
+  S.p12Daily.tableDateFrom=d.dateFrom||'';
+  S.p12Daily.tableDateTo=d.dateTo||'';
   const input = document.getElementById('ci-promo-category');
   if(input) input.value = '';
   document.getElementById('p12d-date-from').value=S.p12Daily.tableDateFrom;
@@ -2979,22 +3062,7 @@ function renderDailyPromoPivot(){
   const filteredRows=baseRows.filter(r=>r.date>=dateFrom&&r.date<=dateTo);
   const outletMap={};
   baseRows.forEach(r=>outletMap[r.branchCode]=r.branchName||r.branchCode);
-
-  // Total value per outlet pada periode terpilih, dipakai untuk urutan kolom.
-  const outletTotals={};
-  Object.keys(outletMap).forEach(code=>outletTotals[code]={qty:0,sales:0});
-  filteredRows.forEach(r=>{
-    if(!outletTotals[r.branchCode]) outletTotals[r.branchCode]={qty:0,sales:0};
-    outletTotals[r.branchCode].qty+=Number(r.qty)||0;
-    outletTotals[r.branchCode].sales+=Number(r.sales)||0;
-  });
-
-  // Urutan kolom outlet: Kiri -> Kanan = Total Value tertinggi -> terendah.
-  const outlets=Object.keys(outletMap).sort((a,b)=>
-    (outletTotals[b].sales-outletTotals[a].sales) ||
-    (outletTotals[b].qty-outletTotals[a].qty) ||
-    outletMap[a].localeCompare(outletMap[b])
-  );
+  const outlets=Object.keys(outletMap).sort((a,b)=>outletMap[a].localeCompare(outletMap[b]));
   const itemMap={};
 
   filteredRows.forEach(r=>{
@@ -3280,7 +3348,7 @@ function updateAutoSum(mi){let total=0;document.querySelectorAll(`input[data-cat
 function autoSave(inp){
   const cat=inp.getAttribute('data-cat'),pt=inp.getAttribute('data-pt'),mi=parseInt(inp.getAttribute('data-m')),code=inp.getAttribute('data-code'),store=inp.getAttribute('data-store'),yr=parseInt(inp.getAttribute('data-year')),v=parseFloat(inp.getAttribute('data-raw'))||0,cid=`c_${code}_${yr}_${mi}_${esc2(cat)}_${esc2(pt)}`,si=document.getElementById(`si_${cid}`);
   if(si){si.className='si saving';si.textContent='';}
-  google.script.run.withSuccessHandler(()=>{if(si){si.className='si saved';si.textContent='✓';setTimeout(()=>{si.className='si';si.textContent='';},2200);}}).withFailureHandler(e=>{if(si){si.className='si err';si.textContent='✗';}toast('err','Gagal: '+e.message);}).saveDataPoint(code,store,yr,mi,cat,pt,v);
+  google.script.run.withSuccessHandler(()=>{S.forceRefreshUntil=Date.now()+10000;if(si){si.className='si saved';si.textContent='✓';setTimeout(()=>{si.className='si';si.textContent='';},2200);}}).withFailureHandler(e=>{if(si){si.className='si err';si.textContent='✗';}toast('err','Gagal: '+e.message);}).saveDataPoint(code,store,yr,mi,cat,pt,v);
 }
 
 // ══════════════════════════════════════════════
@@ -3289,13 +3357,13 @@ function autoSave(inp){
 function submitComplain(){
   const d={store:document.getElementById('mc-store').value,storeCode:document.getElementById('mc-code').value,divisi:document.getElementById('mc-div').value,date:document.getElementById('mc-date').value,time:document.getElementById('mc-time').value,sumber:document.getElementById('mc-sumber').value,namaTamu:document.getElementById('mc-nama').value,phone:document.getElementById('mc-phone').value,email:document.getElementById('mc-email').value,detail:document.getElementById('mc-detail').value};
   if(!d.date||!d.detail){toast('warn','Isi Tanggal & Detail');return;}
-  google.script.run.withSuccessHandler(r=>{if(r.success){toast('ok','✅ Tersimpan');closeModal2('m-complain');loadP10(getActiveReqParams());}else toast('err',r.error);}).saveComplain(d);
+  google.script.run.withSuccessHandler(r=>{if(r.success){toast('ok','✅ Tersimpan');closeModal2('m-complain');S.forceRefreshUntil=Date.now()+10000;loadP10(getActiveReqParams());}else toast('err',r.error);}).saveComplain(d);
 }
 function submitPromo(){
   const se=document.getElementById('mp-store');const outlet=S.outlets.find(o=>o.code===se.value);
   const d={bulan:parseInt(document.getElementById('mp-bln').value),tahun:parseInt(document.getElementById('mp-thn').value),store:outlet?outlet.store:se.value,storeCode:se.value,promo:document.getElementById('mp-promo').value,item:document.getElementById('mp-item').value,qty:document.getElementById('mp-qty').value,value:document.getElementById('mp-val').value,notes:document.getElementById('mp-notes').value};
   if(!d.promo||!d.storeCode){toast('warn','Isi Promo & Store');return;}
-  google.script.run.withSuccessHandler(r=>{if(r.success){toast('ok','✅ Promo disimpan');closeModal2('m-promo');loadP12(getActiveReqParams());}else toast('err',r.error);}).savePromotion(d);
+  google.script.run.withSuccessHandler(r=>{if(r.success){toast('ok','✅ Promo disimpan');closeModal2('m-promo');S.forceRefreshUntil=Date.now()+10000;loadP12(getActiveReqParams());}else toast('err',r.error);}).savePromotion(d);
 }
 
 // ══════════════════════════════════════════════
