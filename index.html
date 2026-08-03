@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="bakerzin-build" content="2026-08-02-all-pages-fast-cache-v9">
+<meta name="bakerzin-build" content="2026-08-03-report-detail-refinement-v10">
 <title>BI</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script defer src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -505,6 +505,12 @@ tfoot td:first-child{position:sticky;left:0;z-index:5}
 #t-p7 tfoot tr:first-child td{border-top:2px solid #CBD5E1}
 #t-p7 .p7-channel-total td{font-weight:800;background:#EEF2F8}
 #t-p7 .p7-channel-total td.num{color:var(--ink-1)}
+#t-p7 .p7-all-channel-total td{font-weight:900;background:#FDECEC;color:var(--brand)}
+#t-p7 .p7-all-channel-total .p7-store-col,#t-p7 .p7-all-channel-total .p7-channel-col{background:#FDECEC;color:var(--brand)}
+#c-p4-bar{position:relative;overflow:visible}
+#c-p4-bar .p4-small-label-overlay{position:absolute;inset:0;z-index:8;pointer-events:none;overflow:visible}
+#c-p4-bar .p4-small-label-lines{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#c-p4-bar .p4-small-label{position:absolute;transform:translate(-50%,-50%);font-size:9.5px;font-weight:800;line-height:1;color:var(--ink-1);white-space:nowrap;text-shadow:0 1px 0 #fff,1px 0 0 #fff,-1px 0 0 #fff,0 -1px 0 #fff}
 .empty{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:60px 20px;text-align:center;color:var(--ink-3);gap:10px;
@@ -1446,9 +1452,10 @@ const S = {
   msSel:['ALL'],
   meData:[],
   p12D:{db:[], sel:{promo:'All'}},
+  p4LabelTimer:0,
   p7Cache:{key:'',data:null,loadedAt:0,loadSeq:0},
   forceRefreshUntil:0,
-  p12Daily:{db:null, selCategory:'All', compareCategory:null, tableDateFrom:'', tableDateTo:'', showSales:false, showPromoSales:true, showContribution:true, loadSeq:0, labelFrame:0},
+  p12Daily:{db:null, selCategory:'All', compareCategory:null, tableDateFrom:'', tableDateTo:'', dateInitialised:false, showSales:false, showPromoSales:true, showContribution:true, loadSeq:0, labelFrame:0},
   dailyGlobalLock:null
 };
 
@@ -1561,11 +1568,14 @@ function setDailyGlobalFilterState(isDaily){
   if(isDaily){
     if(!S.dailyGlobalLock){
       S.dailyGlobalLock={month:monthEl.value,year:yearEl.value,compare:compareEl.value};
-      const now=new Date();
-      const year=now.getFullYear(),month=now.getMonth()+1;
-      const lastDay=new Date(year,month,0).getDate();
-      S.p12Daily.tableDateFrom=`${year}-${String(month).padStart(2,'0')}-01`;
-      S.p12Daily.tableDateTo=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+      if(!S.p12Daily.dateInitialised){
+        const now=new Date();
+        const year=now.getFullYear(),month=now.getMonth()+1;
+        const lastDay=new Date(year,month,0).getDate();
+        S.p12Daily.tableDateFrom=`${year}-${String(month).padStart(2,'0')}-01`;
+        S.p12Daily.tableDateTo=`${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+        S.p12Daily.dateInitialised=true;
+      }
       const fromEl=document.getElementById('p12d-date-from'),toEl=document.getElementById('p12d-date-to');
       if(fromEl) fromEl.value=S.p12Daily.tableDateFrom;
       if(toEl) toEl.value=S.p12Daily.tableDateTo;
@@ -1984,6 +1994,91 @@ function loadP3(req) {
 // ══════════════════════════════════════════════
 // P4: SALES TYPE
 // ══════════════════════════════════════════════
+function scheduleSalesTypeSmallLabels(barSeries){
+  if(S.p4LabelTimer)clearTimeout(S.p4LabelTimer);
+  S.p4LabelTimer=setTimeout(()=>{
+    S.p4LabelTimer=0;
+    renderSalesTypeSmallLabels(barSeries);
+  },80);
+}
+
+function renderSalesTypeSmallLabels(barSeries){
+  const root=document.getElementById('c-p4-bar');
+  if(!root)return;
+  root.querySelector('.p4-small-label-overlay')?.remove();
+  const rootRect=root.getBoundingClientRect();
+  if(!rootRect.width||!rootRect.height)return;
+
+  const overlay=document.createElement('div');
+  overlay.className='p4-small-label-overlay';
+  const lines=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  lines.setAttribute('class','p4-small-label-lines');
+  lines.setAttribute('viewBox',`0 0 ${rootRect.width} ${rootRect.height}`);
+  overlay.appendChild(lines);
+  root.appendChild(overlay);
+
+  const groups=Array.from(root.querySelectorAll('.apexcharts-bar-series .apexcharts-series'));
+  const labelColors=['#922B21','#1F618D','#1E8449','#9A6700','#6C3483'];
+  const occupied=[];
+  const overlaps=(a,b)=>!(a.right+3<b.left||a.left>b.right+3||a.bottom+2<b.top||a.top>b.bottom+2);
+
+  barSeries.forEach((series,seriesIndex)=>{
+    const paths=Array.from(groups[seriesIndex]?.querySelectorAll('.apexcharts-bar-area')||[]);
+    series.data.forEach((rawValue,dataIndex)=>{
+      const value=Number(rawValue)||0;
+      const total=barSeries.reduce((sum,item)=>sum+(Number(item.data[dataIndex])||0),0);
+      const pct=total>0?value/total*100:0;
+      if(value<=0||pct>=5)return;
+      const path=paths[dataIndex];
+      if(!path)return;
+      const rect=path.getBoundingClientRect();
+      if(!rect.height)return;
+
+      const anchorX=(rect.left+rect.right)/2-rootRect.left;
+      const anchorY=(rect.top+rect.bottom)/2-rootRect.top;
+      const text=`${Math.max(.1,pct).toFixed(pct<1?1:0)}%`;
+      const width=Math.max(24,text.length*6+4),height=12;
+      const above=rect.top-rootRect.top-11;
+      const below=rect.bottom-rootRect.top+13;
+      const candidates=[
+        {x:anchorX,y:seriesIndex%2?below:above},
+        {x:anchorX,y:seriesIndex%2?above:below},
+        {x:anchorX+18,y:above},{x:anchorX-18,y:below},
+        {x:anchorX+28,y:below},{x:anchorX-28,y:above}
+      ];
+      let selected=null;
+      for(const candidate of candidates){
+        const x=Math.max(width/2+4,Math.min(rootRect.width-width/2-4,candidate.x));
+        const y=Math.max(height/2+4,Math.min(rootRect.height-height/2-4,candidate.y));
+        const box={left:x-width/2,right:x+width/2,top:y-height/2,bottom:y+height/2,x,y};
+        if(!occupied.some(other=>overlaps(box,other))){selected=box;break;}
+        if(!selected)selected=box;
+      }
+      if(!selected)return;
+      occupied.push(selected);
+
+      const label=document.createElement('span');
+      label.className='p4-small-label';
+      label.textContent=text;
+      label.style.left=`${selected.x}px`;
+      label.style.top=`${selected.y}px`;
+      label.style.color=labelColors[seriesIndex%labelColors.length];
+      overlay.appendChild(label);
+
+      const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',String(anchorX));
+      line.setAttribute('y1',String(anchorY));
+      line.setAttribute('x2',String(selected.x));
+      line.setAttribute('y2',String(selected.y+(selected.y<anchorY?height/2:-height/2)));
+      line.setAttribute('stroke',labelColors[seriesIndex%labelColors.length]);
+      line.setAttribute('stroke-width','1');
+      line.setAttribute('stroke-linecap','round');
+      line.setAttribute('opacity','.75');
+      lines.appendChild(line);
+    });
+  });
+}
+
 function loadP4(req) {
   google.script.run.withSuccessHandler(d=>{ 
     if(d.error){ toast('err', d.error); return; }
@@ -2012,7 +2107,14 @@ function loadP4(req) {
 
     const chH = 70 * (mE - mS + 1);
     mkChart('c-p4-bar', {
-      chart:{type:'bar',stacked:true,height:Math.max(chH, 200)}, 
+      chart:{
+        type:'bar',stacked:true,height:Math.max(chH, 200),
+        events:{
+          mounted:()=>scheduleSalesTypeSmallLabels(barSeries),
+          updated:()=>scheduleSalesTypeSmallLabels(barSeries),
+          animationEnd:()=>scheduleSalesTypeSmallLabels(barSeries)
+        }
+      },
       colors: PAL, 
       fill: { type: 'solid', opacity: 1 }, 
       series:barSeries, 
@@ -2339,6 +2441,24 @@ function loadP7(req) {
         row+=`<td class="num gt-col">${inlineLyLm(fmtS(grandTotal),grandTotal,lyGrandTotal,0)}</td></tr>`;
         footerHtml+=row;
       });
+
+      let allChannelRow=`<tr class="p7-all-channel-total"><td class="p7-store-col">GRAND TOTAL</td><td class="p7-channel-col">ALL CHANNEL</td><td>${yr}</td>`;
+      let allChannelGrandTotal=0,lyAllChannelGrandTotal=0;
+      for(let m=mS;m<=mE;m++){
+        let value=0,lyValue=0,lmValue=0;
+        Object.values(d[yr]||{}).forEach(sd=>{
+          value+=Object.values(sd.monthly[m].channels||{}).reduce((sum,item)=>sum+(Number(item)||0),0);
+          if(m>0)lmValue+=Object.values(sd.monthly[m-1].channels||{}).reduce((sum,item)=>sum+(Number(item)||0),0);
+        });
+        Object.values(d[yr-1]||{}).forEach(sd=>{
+          lyValue+=Object.values(sd.monthly[m].channels||{}).reduce((sum,item)=>sum+(Number(item)||0),0);
+        });
+        allChannelGrandTotal+=value;
+        lyAllChannelGrandTotal+=lyValue;
+        allChannelRow+=`<td class="num">${inlineLyLm(value>0?fmtS(value):'',value,lyValue,lmValue)}</td>`;
+      }
+      allChannelRow+=`<td class="num gt-col">${inlineLyLm(allChannelGrandTotal>0?fmtS(allChannelGrandTotal):'',allChannelGrandTotal,lyAllChannelGrandTotal,0)}</td></tr>`;
+      if(allChannelGrandTotal>0)footerHtml+=allChannelRow;
     });
     t.querySelector('tfoot').innerHTML=footerHtml;
   };
@@ -2573,11 +2693,14 @@ function loadP11(req) {
 // P12D: DAILY PROMOTION
 // ══════════════════════════════════════════════
 function loadP12Daily(req){
+  req=(req&&req.displayYears)?req:getActiveReqParams();
+  const requestDateFrom=S.p12Daily.tableDateFrom||req.dateFrom;
+  const requestDateTo=S.p12Daily.tableDateTo||req.dateTo;
   const loadSeq=++S.p12Daily.loadSeq;
   if(S.charts['c-p12d']){S.charts['c-p12d'].destroy();delete S.charts['c-p12d'];}
   const chartEl=document.getElementById('c-p12d');
   chartEl.replaceChildren();
-  chartEl.innerHTML='<div class="loading"><div class="spin"></div><div>Memuat data bulan berjalan...</div></div>';
+  chartEl.innerHTML='<div class="loading"><div class="spin"></div><div>Memuat data sesuai rentang tanggal...</div></div>';
   document.getElementById('p12d-hr1').innerHTML='<th>Nama Item</th>';
   document.getElementById('p12d-hr2').innerHTML='';
   document.getElementById('p12d-tbody').innerHTML='<tr><td colspan="99"><div class="loading" style="min-height:150px"><div class="spin"></div><div>Menyiapkan pivot table...</div></div></td></tr>';
@@ -2606,7 +2729,7 @@ function loadP12Daily(req){
         S.p12Daily.tableDateTo=d.dateTo||'';
       }
       const fromEl=document.getElementById('p12d-date-from'),toEl=document.getElementById('p12d-date-to');
-      [fromEl,toEl].forEach(el=>{el.min=d.dateFrom||'';el.max=d.dateTo||'';});
+      [fromEl,toEl].forEach(el=>{el.removeAttribute('min');el.removeAttribute('max');});
       fromEl.value=S.p12Daily.tableDateFrom;
       toEl.value=S.p12Daily.tableDateTo;
       document.getElementById('p12d-show-sales').checked=!!S.p12Daily.showSales;
@@ -2626,7 +2749,7 @@ function loadP12Daily(req){
       document.getElementById('p12d-item-info').textContent='';
       toast('err', e.message || String(e));
     })
-    .getDashboardData({ ...req, page:'dailyPromo' });
+    .getDashboardData({ ...req, dateFrom:requestDateFrom, dateTo:requestDateTo, page:'dailyPromo' });
 }
 
 function buildDailyPromoCategoryList(){
@@ -2697,16 +2820,22 @@ function updateDailyPromoComparisonUI(){
 function resetDailyPromoFilter(){
   S.p12Daily.selCategory = 'All';
   S.p12Daily.compareCategory=null;
-  const d=S.p12Daily.db||{};
-  S.p12Daily.tableDateFrom=d.dateFrom||'';
-  S.p12Daily.tableDateTo=d.dateTo||'';
+  const now=new Date();
+  const year=now.getFullYear(),month=now.getMonth()+1;
+  S.p12Daily.tableDateFrom=`${year}-${String(month).padStart(2,'0')}-01`;
+  S.p12Daily.tableDateTo=`${year}-${String(month).padStart(2,'0')}-${String(new Date(year,month,0).getDate()).padStart(2,'0')}`;
   const input = document.getElementById('ci-promo-category');
   if(input) input.value = '';
   document.getElementById('p12d-date-from').value=S.p12Daily.tableDateFrom;
   document.getElementById('p12d-date-to').value=S.p12Daily.tableDateTo;
   document.querySelectorAll('#cl-promo-category .combo-item').forEach(el=>el.classList.toggle('sel',el.dataset.v==='All'));
   updateDailyPromoComparisonUI();
-  applyDailyPromoFilters();
+  const d=S.p12Daily.db||{};
+  if(!d.dateFrom||S.p12Daily.tableDateFrom<d.dateFrom||S.p12Daily.tableDateTo>d.dateTo){
+    loadP12Daily({...getActiveReqParams(),dateFrom:S.p12Daily.tableDateFrom,dateTo:S.p12Daily.tableDateTo});
+  }else{
+    applyDailyPromoFilters();
+  }
 }
 
 function onDailyPromoDateFilter(){
@@ -2714,13 +2843,15 @@ function onDailyPromoDateFilter(){
   let from=document.getElementById('p12d-date-from').value||d.dateFrom;
   let to=document.getElementById('p12d-date-to').value||d.dateTo;
   if(from>to){const swap=from;from=to;to=swap;}
-  from=from<d.dateFrom?d.dateFrom:from;
-  to=to>d.dateTo?d.dateTo:to;
   S.p12Daily.tableDateFrom=from;
   S.p12Daily.tableDateTo=to;
   document.getElementById('p12d-date-from').value=from;
   document.getElementById('p12d-date-to').value=to;
-  applyDailyPromoFilters();
+  if(!d.dateFrom||from<d.dateFrom||to>d.dateTo){
+    loadP12Daily({...getActiveReqParams(),dateFrom:from,dateTo:to});
+  }else{
+    applyDailyPromoFilters();
+  }
 }
 
 function selectDailyPromoDate(index,dates){
